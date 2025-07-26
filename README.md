@@ -4,6 +4,34 @@
 このプロジェクトは、大規模な従業員データを効率的に管理・処理するデモアプリケーションです。
 マルチスレッド処理を活用し、高速なデータ処理と性能比較機能を提供します。
 
+## アーキテクチャと処理フロー
+
+このアプリケーションは、Spring Bootの標準的なアーキテクチャに準拠しています。
+主な処理フローは以下の通りです。
+
+```mermaid
+sequenceDiagram
+    participant App as DemoApplication
+    participant Service as EmployeeService
+    participant Mapper as EmployeeMapper
+    participant DB as SQL Server
+
+    App->>Service: generateAndUpsertRandomEmployees()
+    Service->>Service: createRandomEmployees()
+    Service->>Mapper: bulkUpsert(employees)
+    Mapper->>DB: Execute MERGE statement
+    DB-->>Mapper: Result
+    Mapper-->>Service: Result
+    Service-->>App: Complete
+```
+
+### 主要コンポーネントの役割
+
+*   **DemoApplication**: アプリケーションのエントリーポイント。`CommandLineRunner` を使用して、起動時に一連のデータ処理タスクを実行します。
+*   **EmployeeService**: 従業員データの生成、バリデーション、データベースへの保存（UPSERT）、CSV出力といった中心的なビジネスロジックを担います。マルチスレッド処理による最適化もこのクラスで実装されています。
+*   **EmployeeMapper**: MyBatisのMapperインターフェース。`EmployeeMapper.xml` に定義されたSQLクエリを呼び出し、データベースとのやり取りを抽象化します。
+*   **EmployeeMapper.xml**: 実際のSQLクエリ（`MERGE`文など）を記述するXMLファイルです。
+
 ## 主な機能
 
 ### 1. 従業員データ管理
