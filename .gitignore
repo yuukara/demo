@@ -1,6 +1,9 @@
 ### CSV Files ###
 *.csv
 
+### Spring Boot ###
+HELP.md
+
 ### Java ###
 # Compiled class file
 *.class
