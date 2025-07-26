@@ -7,6 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.example123.demo.domain.Employee;
+import com.example123.demo.service.EmployeeService;
+import com.example123.demo.service.OptimizedEmployeeService;
+
 @SpringBootTest
 class DemoApplicationTests {
 

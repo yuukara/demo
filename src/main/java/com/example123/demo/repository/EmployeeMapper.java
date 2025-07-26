@@ -1,8 +1,10 @@
-package com.example123.demo;
+package com.example123.demo.repository;
 
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
+
+import com.example123.demo.domain.Employee;
 
 /**
  * 従業員情報のデータベース操作を行うマッパーインターフェース

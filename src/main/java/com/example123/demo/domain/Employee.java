@@ -1,4 +1,4 @@
-package com.example123.demo;
+package com.example123.demo.domain;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,4 +59,10 @@ public class Employee {
 
     /** 排他制御用バージョン番号 - 楽観的ロックに使用 */
     private Long version;
+    public Employee(String id, String name, String department, String email) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+        this.email = email;
+    }
 }

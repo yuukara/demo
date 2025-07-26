@@ -7,6 +7,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import com.example123.demo.controller.EmployeeController;
+import com.example123.demo.domain.Employee;
+import com.example123.demo.domain.PopulationData;
+import com.example123.demo.repository.EmployeeMapper;
+import com.example123.demo.service.EmployeeService;
+import com.example123.demo.service.PopulationDataService;
+import com.example123.demo.service.SafeDataProcessingService;
+import com.example123.demo.service.UnsafeDataProcessingService;
+
 /**
  * 従業員情報管理デモアプリケーション
  * 
@@ -40,13 +49,11 @@ public class DemoApplication {
      * @return CommandLineRunner インスタンス
      */
     @Bean
-    public CommandLineRunner run(EmployeeService employeeService, PopulationDataService populationDataService,
-                               UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
-                               EmployeeMapper employeeMapper) {
+    public CommandLineRunner run(EmployeeController employeeController, PopulationDataService populationDataService,
+                                UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
+                                EmployeeMapper employeeMapper) {
         return args -> {
-            // MERGE文を使用したUPSERTのテスト
-            System.out.println("\n=== Testing MERGE-based UPSERT ===");
-            employeeService.generateAndUpsertRandomEmployees();
+            employeeController.testMergeUpsert();
 
             // 以下の処理は一時的に無効化
             // runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);

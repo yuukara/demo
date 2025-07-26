@@ -1,4 +1,4 @@
-package com.example123.demo;
+package com.example123.demo.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;

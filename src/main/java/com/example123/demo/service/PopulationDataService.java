@@ -1,4 +1,4 @@
-package com.example123.demo;
+package com.example123.demo.service;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -10,6 +10,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.example123.demo.domain.PopulationData;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;

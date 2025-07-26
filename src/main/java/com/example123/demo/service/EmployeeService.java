@@ -1,4 +1,4 @@
-package com.example123.demo;
+package com.example123.demo.service;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -17,6 +17,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.example123.demo.domain.Employee;
+import com.example123.demo.repository.EmployeeMapper;
 
 /**
  * 従業員情報を管理するサービスクラス
@@ -311,15 +314,15 @@ public class EmployeeService {
                     employee.getDepartment(),
                     employee.getPosition(),
                     employee.getEmployment_status(),
-                    employee.getHire_date(),
+                    employee.getHire_date() != null ? employee.getHire_date().toString() : "",
                     employee.getPhone_number(),
                     employee.getEmail(),
-                    employee.getBirth_date(),
+                    employee.getBirth_date() != null ? employee.getBirth_date().toString() : "",
                     employee.getGender(),
                     employee.getCreated_by(),
-                    employee.getCreated_at(),
+                    employee.getCreated_at() != null ? employee.getCreated_at().toString() : "",
                     employee.getUpdated_by(),
-                    employee.getUpdated_at(),
+                    employee.getUpdated_at() != null ? employee.getUpdated_at().toString() : "",
                     employee.getVersion()));
             }
             
@@ -435,15 +438,15 @@ public class EmployeeService {
                             employee.getDepartment(),
                             employee.getPosition(),
                             employee.getEmployment_status(),
-                            employee.getHire_date().toString(),
+                            employee.getHire_date() != null ? employee.getHire_date().toString() : "",
                             employee.getPhone_number(),
                             employee.getEmail(),
-                            employee.getBirth_date().toString(),
+                            employee.getBirth_date() != null ? employee.getBirth_date().toString() : "",
                             employee.getGender(),
                             employee.getCreated_by(),
-                            employee.getCreated_at().toString(),
+                            employee.getCreated_at() != null ? employee.getCreated_at().toString() : "",
                             employee.getUpdated_by(),
-                            employee.getUpdated_at().toString(),
+                            employee.getUpdated_at() != null ? employee.getUpdated_at().toString() : "",
                             String.valueOf(employee.getVersion())))
                     .collect(Collectors.joining("\n", "", "\n"));
         }

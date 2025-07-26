@@ -1,4 +1,4 @@
-package com.example123.demo;
+package com.example123.demo.service;
 
 import java.util.ArrayList;
 import java.util.List;
