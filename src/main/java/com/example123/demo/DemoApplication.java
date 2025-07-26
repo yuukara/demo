@@ -44,11 +44,13 @@ public class DemoApplication {
                                UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
                                EmployeeMapper employeeMapper) {
         return args -> {
-            // 既存の処理はそのまま残す
-            runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);
+            // MERGE文を使用したUPSERTのテスト
+            System.out.println("\n=== Testing MERGE-based UPSERT ===");
+            employeeService.generateAndUpsertRandomEmployees();
 
-            // 新しいデータ処理サービスの性能比較
-            runDataProcessingTasks(unsafeService, safeService);
+            // 以下の処理は一時的に無効化
+            // runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);
+            // runDataProcessingTasks(unsafeService, safeService);
         };
     }
 

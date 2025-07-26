@@ -25,4 +25,54 @@
         </foreach>
     </insert>
 
+    <insert id="bulkUpsert" parameterType="java.util.List">
+        <foreach collection="list" item="employee" separator=";">
+            MERGE INTO employees AS target
+            USING (
+                SELECT 
+                    #{employee.id} AS id,
+                    #{employee.name} AS name,
+                    #{employee.department} AS department,
+                    #{employee.position} AS position,
+                    #{employee.employment_status} AS employment_status,
+                    #{employee.hire_date} AS hire_date,
+                    #{employee.phone_number} AS phone_number,
+                    #{employee.email} AS email,
+                    #{employee.birth_date} AS birth_date,
+                    #{employee.gender} AS gender,
+                    #{employee.created_by} AS created_by,
+                    #{employee.created_at} AS created_at,
+                    #{employee.updated_by} AS updated_by,
+                    #{employee.updated_at} AS updated_at,
+                    #{employee.version} + 1 AS version
+            ) AS source
+            ON target.id = source.id
+            WHEN MATCHED THEN
+                UPDATE SET 
+                    name = source.name,
+                    department = source.department,
+                    position = source.position,
+                    employment_status = source.employment_status,
+                    hire_date = source.hire_date,
+                    phone_number = source.phone_number,
+                    email = source.email,
+                    birth_date = source.birth_date,
+                    gender = source.gender,
+                    updated_by = source.updated_by,
+                    updated_at = source.updated_at,
+                    version = source.version
+            WHEN NOT MATCHED THEN
+                INSERT (
+                    id, name, department, position, employment_status,
+                    hire_date, phone_number, email, birth_date, gender,
+                    created_by, created_at, updated_by, updated_at, version
+                )
+                VALUES (
+                    source.id, source.name, source.department, source.position, source.employment_status,
+                    source.hire_date, source.phone_number, source.email, source.birth_date, source.gender,
+                    source.created_by, source.created_at, source.updated_by, source.updated_at, source.version
+                );
+        </foreach>
+    </insert>
+
 </mapper>
