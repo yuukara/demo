@@ -23,4 +23,15 @@ public interface EmployeeMapper {
      * @param employees 登録する従業員情報のリスト
      */
     void bulkInsert(List<Employee> employees);
+
+    /**
+     * 従業員情報を一括でUPSERT（更新または挿入）します
+     * MERGE文を使用して効率的な一括処理を行います
+     * 
+     * - 既存レコードの場合：バージョンを増分して更新
+     * - 新規レコードの場合：新しいレコードとして挿入
+     *
+     * @param employees UPSERT対象の従業員情報のリスト
+     */
+    void bulkUpsert(List<Employee> employees);
 }
