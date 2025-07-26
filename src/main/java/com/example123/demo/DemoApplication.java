@@ -5,31 +5,72 @@ import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
-@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class})
+/**
+ * 従業員情報管理デモアプリケーション
+ * 
+ * 以下の機能を提供します：
+ * 1. 大量の従業員データの生成とデータベース保存
+ * 2. マルチスレッドとシングルスレッドでのCSVファイル生成の性能比較
+ * 3. 安全なデータ処理と非安全なデータ処理の性能比較
+ * 4. 人口データの読み込みテスト
+ */
+@SpringBootApplication
 public class DemoApplication {
 
+    /**
+     * アプリケーションのエントリーポイント
+     *
+     * @param args コマンドライン引数
+     */
     public static void main(String[] args) {
         SpringApplication.run(DemoApplication.class, args);
     }
 
+    /**
+     * アプリケーション起動時に実行されるコマンドラインランナー
+     * 各種データ処理とパフォーマンステストを実行します
+     *
+     * @param employeeService 従業員情報管理サービス
+     * @param populationDataService 人口データ管理サービス
+     * @param unsafeService 非安全なデータ処理サービス
+     * @param safeService 安全なデータ処理サービス
+     * @param employeeMapper 従業員情報マッパー
+     * @return CommandLineRunner インスタンス
+     */
     @Bean
     public CommandLineRunner run(EmployeeService employeeService, PopulationDataService populationDataService,
-                                 UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService) {
+                               UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
+                               EmployeeMapper employeeMapper) {
         return args -> {
             // 既存の処理はそのまま残す
-            runEmployeeAndPopulationTasks(employeeService, populationDataService);
+            runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);
 
             // 新しいデータ処理サービスの性能比較
             runDataProcessingTasks(unsafeService, safeService);
         };
     }
 
-    private void runEmployeeAndPopulationTasks(EmployeeService employeeService, PopulationDataService populationDataService) {
+    /**
+     * 従業員データと人口データの処理を実行します
+     * データの生成、CSV出力、データベース保存を行います
+     *
+     * @param employeeService 従業員情報管理サービス
+     * @param populationDataService 人口データ管理サービス
+     * @param employeeMapper 従業員情報マッパー
+     */
+    private void runEmployeeAndPopulationTasks(EmployeeService employeeService,
+                                             PopulationDataService populationDataService,
+                                             EmployeeMapper employeeMapper) {
         System.out.println("Starting employee data generation and CSV creation process...");
+
+        // テーブルのデータを削除
+        System.out.println("Truncating employees table...");
+        long startDelete = System.currentTimeMillis();
+        employeeMapper.truncateTable();
+        long deleteTime = System.currentTimeMillis() - startDelete;
+        System.out.printf("Deletion completed in %.2f seconds%n", deleteTime / 1000.0);
 
         // データ生成
         long startGeneration = System.currentTimeMillis();
@@ -59,6 +100,10 @@ public class DemoApplication {
         double speedup = (double) singleThreadTime / multiThreadTime;
         System.out.printf("Speed-up ratio: %.2fx%n", speedup);
 
+        // データベースへの保存
+        System.out.println("\n=== Database Save Test ===");
+        employeeService.saveEmployees(employees);
+
         // 人口データの読み込みテスト
         System.out.println("\n=== Population Data Loading Test ===");
         try {
@@ -84,7 +129,15 @@ public class DemoApplication {
         }
     }
 
-    private void runDataProcessingTasks(UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService) {
+    /**
+     * データ処理サービスの性能比較を実行します
+     * 安全な処理と非安全な処理の実行時間を比較します
+     *
+     * @param unsafeService 非安全なデータ処理サービス
+     * @param safeService 安全なデータ処理サービス
+     */
+    private void runDataProcessingTasks(UnsafeDataProcessingService unsafeService,
+                                      SafeDataProcessingService safeService) {
         System.out.println("\n\n=== Data Processing Service Comparison ===");
         final int DATA_SIZE = 10_000_000;
 
@@ -93,14 +146,16 @@ public class DemoApplication {
         long startUnsafe = System.currentTimeMillis();
         List<Integer> unsafeResult = unsafeService.processData(DATA_SIZE);
         long unsafeTime = System.currentTimeMillis() - startUnsafe;
-        System.out.printf("Unsafe service processed %d records in %.2f seconds%n", unsafeResult.size(), unsafeTime / 1000.0);
+        System.out.printf("Unsafe service processed %d records in %.2f seconds%n",
+            unsafeResult.size(), unsafeTime / 1000.0);
 
         // --- Safe (Chunked) Service ---
         System.out.println("\n--- Running SafeDataProcessingService ---");
         long startSafe = System.currentTimeMillis();
         List<Integer> safeResult = safeService.processData(DATA_SIZE);
         long safeTime = System.currentTimeMillis() - startSafe;
-        System.out.printf("Safe service processed %d records in %.2f seconds%n", safeResult.size(), safeTime / 1000.0);
+        System.out.printf("Safe service processed %d records in %.2f seconds%n",
+            safeResult.size(), safeTime / 1000.0);
 
         // --- Performance Comparison ---
         System.out.println("\n=== Performance Comparison (Data Processing) ===");
