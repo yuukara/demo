@@ -192,6 +192,15 @@ public class EmployeeService {
     }
 
     /**
+     * 従業員テーブルのデータを全て削除します。
+     */
+    public void truncateEmployeesTable() {
+        System.out.println("Truncating employees table...");
+        employeeMapper.truncateTable();
+        System.out.println("Employees table truncated.");
+    }
+
+    /**
      * 従業員情報をデータベースに保存します
      * 内部で並列処理による保存を行います
      *

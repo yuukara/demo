@@ -7,7 +7,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
-import com.example123.demo.controller.EmployeeController;
 import com.example123.demo.domain.Employee;
 import com.example123.demo.domain.PopulationData;
 import com.example123.demo.repository.EmployeeMapper;
@@ -49,13 +48,13 @@ public class DemoApplication {
      * @return CommandLineRunner インスタンス
      */
     @Bean
-    public CommandLineRunner run(EmployeeController employeeController, PopulationDataService populationDataService,
-                                UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
-                                EmployeeMapper employeeMapper) {
+    public CommandLineRunner run(PopulationDataService populationDataService,
+                                 UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
+                                 EmployeeMapper employeeMapper) {
         return args -> {
-            employeeController.testMergeUpsert();
+            // employeeController.testMergeUpsert();  // 一時的に無効化
 
-            // 以下の処理は一時的に無効化
+            // 以下の処理も引き続き無効化
             // runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);
             // runDataProcessingTasks(unsafeService, safeService);
         };

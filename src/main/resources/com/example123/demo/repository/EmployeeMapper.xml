@@ -29,7 +29,7 @@
         <foreach collection="list" item="employee" separator=";">
             MERGE INTO employees AS target
             USING (
-                SELECT 
+                SELECT
                     #{employee.id} AS id,
                     #{employee.name} AS name,
                     #{employee.department} AS department,
@@ -43,12 +43,11 @@
                     #{employee.created_by} AS created_by,
                     #{employee.created_at} AS created_at,
                     #{employee.updated_by} AS updated_by,
-                    #{employee.updated_at} AS updated_at,
-                    #{employee.version} + 1 AS version
+                    #{employee.updated_at} AS updated_at
             ) AS source
             ON target.id = source.id
             WHEN MATCHED THEN
-                UPDATE SET 
+                UPDATE SET
                     name = source.name,
                     department = source.department,
                     position = source.position,
@@ -60,7 +59,7 @@
                     gender = source.gender,
                     updated_by = source.updated_by,
                     updated_at = source.updated_at,
-                    version = source.version
+                    version = target.version + 1
             WHEN NOT MATCHED THEN
                 INSERT (
                     id, name, department, position, employment_status,
@@ -70,7 +69,7 @@
                 VALUES (
                     source.id, source.name, source.department, source.position, source.employment_status,
                     source.hire_date, source.phone_number, source.email, source.birth_date, source.gender,
-                    source.created_by, source.created_at, source.updated_by, source.updated_at, source.version
+                    source.created_by, source.created_at, source.updated_by, source.updated_at, 0
                 );
         </foreach>
     </insert>

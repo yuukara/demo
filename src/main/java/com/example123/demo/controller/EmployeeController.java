@@ -13,7 +13,11 @@ public class EmployeeController {
     }
 
     public void testMergeUpsert() {
+        employeeService.truncateEmployeesTable();
         System.out.println("\n=== Testing MERGE-based UPSERT ===");
+        long startTime = System.currentTimeMillis();
         employeeService.generateAndUpsertRandomEmployees();
+        long endTime = System.currentTimeMillis();
+        System.out.println("testMergeUpsert execution time: " + (endTime - startTime) + "ms");
     }
 }

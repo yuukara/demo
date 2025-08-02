@@ -1,0 +1,175 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example123.demo.repository.EmployeeAssignmentHistoryMapper">
+
+  <select id="upsertViaTempTable" parameterType="java.util.List" resultType="map">
+    SET NOCOUNT ON;
+
+    -- 1) #Temp 再作成（同一接続での再実行に備える）
+    IF OBJECT_ID('tempdb..#TempEAH') IS NOT NULL DROP TABLE #TempEAH;
+
+    CREATE TABLE #TempEAH (
+      employee_id          NVARCHAR(20)  NOT NULL,
+      org_code             NVARCHAR(10)  NOT NULL,
+      job_code             NVARCHAR(10)  NOT NULL,
+      effective_from       DATE          NOT NULL,
+      seq_no               INT           NOT NULL,
+      effective_to         DATE              NULL,
+      status_code          NVARCHAR(10)      NULL,
+      base_location_code   NVARCHAR(10)      NULL,
+      employment_type      NVARCHAR(10)      NULL,
+      grade_code           NVARCHAR(10)      NULL,
+      salary_band_code     NVARCHAR(10)      NULL,
+      manager_emp_id       NVARCHAR(20)      NULL,
+      project_code         NVARCHAR(20)      NULL,
+      cost_center_code     NVARCHAR(20)      NULL,
+      work_pattern_code    NVARCHAR(10)      NULL,
+      shift_group_code     NVARCHAR(10)      NULL,
+      allow_remote         BIT               NULL,
+      fte_ratio            DECIMAL(5,2)      NULL,
+      attr1                NVARCHAR(100)     NULL,
+      attr2                NVARCHAR(100)     NULL,
+      attr3                NVARCHAR(100)     NULL,
+      attr4                NVARCHAR(100)     NULL,
+      attr5                NVARCHAR(100)     NULL,
+      attr6                NVARCHAR(100)     NULL,
+      attr7                NVARCHAR(100)     NULL,
+      attr8                NVARCHAR(100)     NULL,
+      attr9                NVARCHAR(100)     NULL,
+      attr10               NVARCHAR(100)     NULL,
+      attr11               NVARCHAR(100)     NULL,
+      attr12               NVARCHAR(100)     NULL,
+      created_at           DATETIME2(3)      NULL,
+      created_by           NVARCHAR(50)      NULL,
+      updated_at           DATETIME2(3)      NULL,
+      updated_by           NVARCHAR(50)      NULL
+    );
+
+    -- 2) #Temp へ投入（※1行=1文にして2100上限を回避）
+    <foreach collection="list" item="h" separator=";">
+      INSERT INTO #TempEAH (
+        employee_id, org_code, job_code, effective_from, seq_no,
+        effective_to, status_code, base_location_code, employment_type, grade_code,
+        salary_band_code, manager_emp_id, project_code, cost_center_code, work_pattern_code,
+        shift_group_code, allow_remote, fte_ratio,
+        attr1, attr2, attr3, attr4, attr5, attr6, attr7, attr8, attr9, attr10, attr11, attr12,
+        created_at, created_by, updated_at, updated_by
+      ) VALUES (
+        #{h.employeeId},
+        #{h.orgCode},
+        #{h.jobCode},
+        #{h.effectiveFrom, jdbcType=DATE},
+        #{h.seqNo},
+
+        #{h.effectiveTo,      jdbcType=DATE},
+        #{h.statusCode,       jdbcType=NVARCHAR},
+        #{h.baseLocationCode, jdbcType=NVARCHAR},
+        #{h.employmentType,   jdbcType=NVARCHAR},
+        #{h.gradeCode,        jdbcType=NVARCHAR},
+        #{h.salaryBandCode,   jdbcType=NVARCHAR},
+        #{h.managerEmpId,     jdbcType=NVARCHAR},
+        #{h.projectCode,      jdbcType=NVARCHAR},
+        #{h.costCenterCode,   jdbcType=NVARCHAR},
+        #{h.workPatternCode,  jdbcType=NVARCHAR},
+        #{h.shiftGroupCode,   jdbcType=NVARCHAR},
+        #{h.allowRemote,      jdbcType=BIT},
+        #{h.fteRatio,         jdbcType=DECIMAL},
+
+        #{h.attr1,  jdbcType=NVARCHAR}, #{h.attr2,  jdbcType=NVARCHAR},
+        #{h.attr3,  jdbcType=NVARCHAR}, #{h.attr4,  jdbcType=NVARCHAR},
+        #{h.attr5,  jdbcType=NVARCHAR}, #{h.attr6,  jdbcType=NVARCHAR},
+        #{h.attr7,  jdbcType=NVARCHAR}, #{h.attr8,  jdbcType=NVARCHAR},
+        #{h.attr9,  jdbcType=NVARCHAR}, #{h.attr10, jdbcType=NVARCHAR},
+        #{h.attr11, jdbcType=NVARCHAR}, #{h.attr12, jdbcType=NVARCHAR},
+
+        #{h.createdAt, jdbcType=TIMESTAMP},
+        #{h.createdBy, jdbcType=NVARCHAR},
+        #{h.updatedAt, jdbcType=TIMESTAMP},
+        #{h.updatedBy, jdbcType=NVARCHAR}
+      )
+    </foreach>;
+
+    -- 3) 既存行を UPDATE（JOIN）
+    UPDATE tgt
+       SET tgt.effective_to       = src.effective_to,
+           tgt.status_code        = src.status_code,
+           tgt.base_location_code = src.base_location_code,
+           tgt.employment_type    = src.employment_type,
+           tgt.grade_code         = src.grade_code,
+           tgt.salary_band_code   = src.salary_band_code,
+           tgt.manager_emp_id     = src.manager_emp_id,
+           tgt.project_code       = src.project_code,
+           tgt.cost_center_code   = src.cost_center_code,
+           tgt.work_pattern_code  = src.work_pattern_code,
+           tgt.shift_group_code   = src.shift_group_code,
+           tgt.allow_remote       = src.allow_remote,
+           tgt.fte_ratio          = src.fte_ratio,
+           tgt.attr1              = src.attr1,
+           tgt.attr2              = src.attr2,
+           tgt.attr3              = src.attr3,
+           tgt.attr4              = src.attr4,
+           tgt.attr5              = src.attr5,
+           tgt.attr6              = src.attr6,
+           tgt.attr7              = src.attr7,
+           tgt.attr8              = src.attr8,
+           tgt.attr9              = src.attr9,
+           tgt.attr10             = src.attr10,
+           tgt.attr11             = src.attr11,
+           tgt.attr12             = src.attr12,
+           tgt.updated_at         = SYSUTCDATETIME(),
+           tgt.updated_by         = src.updated_by
+      FROM dbo.employee_assignment_history AS tgt
+      JOIN #TempEAH AS src
+        ON tgt.employee_id    = src.employee_id
+       AND tgt.org_code       = src.org_code
+       AND tgt.job_code       = src.job_code
+       AND tgt.effective_from = src.effective_from
+       AND tgt.seq_no         = src.seq_no;
+
+    DECLARE @UpdateCount int = @@ROWCOUNT;
+
+   -- 4) 不足行を INSERT（LEFT JOIN で存在しないものだけ）
+    INSERT INTO dbo.employee_assignment_history (
+      employee_id, org_code, job_code, effective_from, seq_no,
+      effective_to, status_code, base_location_code, employment_type, grade_code,
+      salary_band_code, manager_emp_id, project_code, cost_center_code, work_pattern_code,
+      shift_group_code, allow_remote, fte_ratio,
+      attr1, attr2, attr3, attr4, attr5, attr6, attr7, attr8, attr9, attr10, attr11, attr12,
+      created_at, created_by, updated_at, updated_by
+    )
+    SELECT
+      src.employee_id, src.org_code, src.job_code, src.effective_from, src.seq_no,
+      src.effective_to, src.status_code, src.base_location_code, src.employment_type, src.grade_code,
+      src.salary_band_code, src.manager_emp_id, src.project_code, src.cost_center_code, src.work_pattern_code,
+      src.shift_group_code, src.allow_remote, src.fte_ratio,
+      src.attr1, src.attr2, src.attr3, src.attr4, src.attr5, src.attr6, src.attr7, src.attr8, src.attr9, src.attr10, src.attr11, src.attr12,
+      ISNULL(src.created_at, SYSUTCDATETIME()), src.created_by, SYSUTCDATETIME(), src.updated_by
+    FROM #TempEAH AS src
+    LEFT JOIN dbo.employee_assignment_history AS tgt
+      ON tgt.employee_id     = src.employee_id
+     AND tgt.org_code        = src.org_code
+     AND tgt.job_code        = src.job_code
+     AND tgt.effective_from  = src.effective_from
+     AND tgt.seq_no          = src.seq_no
+    WHERE tgt.employee_id IS NULL;
+
+    DECLARE @InsertCount int = @@ROWCOUNT;
+
+    -- 5) 結果を返す
+    SELECT @UpdateCount AS updateCount, @InsertCount AS insertCount;
+  </select>
+
+  <select id="selectRandomKeys" resultType="com.example123.demo.repository.EmployeeAssignmentHistoryKey">
+    SELECT TOP (#{limit})
+           employee_id  AS employeeId,
+           org_code     AS orgCode,
+           job_code     AS jobCode,
+           effective_from AS effectiveFrom,
+           seq_no       AS seqNo
+    FROM dbo.employee_assignment_history
+    ORDER BY NEWID()
+  </select>
+
+  <select id="countAll" resultType="long">
+    SELECT COUNT(*) FROM dbo.employee_assignment_history
+  </select>
+</mapper>
