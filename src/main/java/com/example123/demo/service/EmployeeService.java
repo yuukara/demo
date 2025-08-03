@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -70,8 +72,48 @@ public class EmployeeService {
      * 既存データとの重複を含み、MERGE文によるUPSERT処理をテストします。
      */
     public void generateAndUpsertRandomEmployees() {
-        List<Employee> employees = createRandomEmployees(3000);
+        // 1) 基礎データ（更新対象）を事前投入
+        prepareBaseDataForUpsert();
+        
+        // 2) UPSERT用データを生成（80%更新・20%新規）
+        List<Employee> employees = createRandomEmployees(6000);
         upsertEmployeesInBatches(employees);
+    }
+
+    /**
+     * 3000件のランダムな従業員データを生成し、一時テーブルを使用した一括UPSERTを行います。
+     * 既存データとの重複を含み、一時テーブルによるUPSERT処理をテストします。
+     *
+     * @return 処理件数を含むMap（updateCount: 更新件数, insertCount: 挿入件数）
+     */
+    public java.util.Map<String, Integer> generateAndUpsertRandomEmployeesViaTempTable() {
+        // 1) 基礎データ（更新対象）を事前投入
+        prepareBaseDataForUpsert();
+        
+        // 2) UPSERT用データを生成（80%更新・20%新規）
+        List<Employee> employees = createRandomEmployees(6000);
+        return upsertEmployeesViaTempTableInBatches(employees);
+    }
+    
+    /**
+     * UPSERT処理用の基礎データを準備します。
+     * 更新対象となるデータ（E000000-E009999）を事前にテーブルに投入します。
+     */
+    private void prepareBaseDataForUpsert() {
+        System.out.println("Preparing base data for upsert test...");
+        List<Employee> baseEmployees = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
+        
+        // E000000-E009999の範囲でベースデータを生成
+        for (int i = 0; i < 10000; i++) {
+            String id = String.format("E%06d", i);
+            Employee employee = createEmployeeWithId(id, now);
+            baseEmployees.add(employee);
+        }
+        
+        // バッチでベースデータを投入
+        saveEmployeesInParallel(baseEmployees);
+        System.out.println("Base data preparation completed: " + baseEmployees.size() + " records inserted.");
     }
 
     /**
@@ -85,47 +127,77 @@ public class EmployeeService {
         List<Employee> employees = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         
-        // 既存のID範囲: E000000-E009999
-        // 新規のID範囲: E010000-E099999
-        for (int i = 0; i < count; i++) {
+        // 80%更新、20%新規の比率で生成
+        int updateCount = (int) Math.round(count * 0.8);
+        int insertCount = count - updateCount;
+        
+        // 1) 更新用データ: 既存ID範囲から生成（E000000-E009999）
+        Set<String> usedUpdateIds = new HashSet<>();
+        for (int i = 0; i < updateCount; i++) {
             String id;
-            if (random.nextDouble() < 0.15) { // 15%の確率で新規ID
-                id = String.format("E%06d", random.nextInt(90000) + 10000); // 新規ID: E010000-E099999
-            } else {
+            do {
                 id = String.format("E%06d", random.nextInt(10000)); // 既存ID: E000000-E009999
-            }
-            Employee employee = new Employee();
-            employee.setId(id);
-            employee.setName(LAST_NAMES[random.nextInt(LAST_NAMES.length)] + 
-                           " " + FIRST_NAMES[random.nextInt(FIRST_NAMES.length)]);
-            employee.setDepartment(DEPARTMENTS[random.nextInt(DEPARTMENTS.length)]);
-            employee.setPosition(POSITIONS[random.nextInt(POSITIONS.length)]);
-            employee.setEmployment_status(EMPLOYMENT_STATUSES[random.nextInt(EMPLOYMENT_STATUSES.length)]);
-            
-            // 入社日は過去10年以内
-            employee.setHire_date(LocalDate.now().minusDays(random.nextInt(3650)));
-            
-            // 電話番号は東京の市外局番を使用
-            employee.setPhone_number(String.format("03-%04d-%04d", 
-                random.nextInt(10000), random.nextInt(10000)));
-            
-            employee.setEmail("employee" + id + "@example.com");
-            
-            // 生年月日は22-60歳の範囲
-            employee.setBirth_date(LocalDate.now()
-                .minusYears(22 + random.nextInt(38))
-                .minusDays(random.nextInt(365)));
-            
-            employee.setGender(random.nextBoolean() ? "男性" : "女性");
-            employee.setCreated_by("SYSTEM");
-            employee.setCreated_at(now);
-            employee.setUpdated_by("SYSTEM");
-            employee.setUpdated_at(now);
-            employee.setVersion(0L);
-            
+            } while (usedUpdateIds.contains(id));
+            usedUpdateIds.add(id);
+
+            Employee employee = createEmployeeWithId(id, now);
             employees.add(employee);
         }
+        
+        // 2) 新規用データ: 新規ID範囲から生成（E010000-E099999）
+        Set<String> usedInsertIds = new HashSet<>();
+        for (int i = 0; i < insertCount; i++) {
+            String id;
+            do {
+                id = String.format("E%06d", random.nextInt(90000) + 10000); // 新規ID: E010000-E099999
+            } while (usedInsertIds.contains(id));
+            usedInsertIds.add(id);
+
+            Employee employee = createEmployeeWithId(id, now);
+            employees.add(employee);
+        }
+        
         return employees;
+    }
+    
+    /**
+     * 指定されたIDを持つ従業員データを生成します。
+     *
+     * @param id 従業員ID
+     * @param now 現在時刻
+     * @return 生成された従業員オブジェクト
+     */
+    private Employee createEmployeeWithId(String id, LocalDateTime now) {
+        Employee employee = new Employee();
+        employee.setId(id);
+        employee.setName(LAST_NAMES[random.nextInt(LAST_NAMES.length)] +
+                       " " + FIRST_NAMES[random.nextInt(FIRST_NAMES.length)]);
+        employee.setDepartment(DEPARTMENTS[random.nextInt(DEPARTMENTS.length)]);
+        employee.setPosition(POSITIONS[random.nextInt(POSITIONS.length)]);
+        employee.setEmployment_status(EMPLOYMENT_STATUSES[random.nextInt(EMPLOYMENT_STATUSES.length)]);
+        
+        // 入社日は過去10年以内
+        employee.setHire_date(LocalDate.now().minusDays(random.nextInt(3650)));
+        
+        // 電話番号は東京の市外局番を使用
+        employee.setPhone_number(String.format("03-%04d-%04d",
+            random.nextInt(10000), random.nextInt(10000)));
+        
+        employee.setEmail("employee" + id + "@example.com");
+        
+        // 生年月日は22-60歳の範囲
+        employee.setBirth_date(LocalDate.now()
+            .minusYears(22 + random.nextInt(38))
+            .minusDays(random.nextInt(365)));
+        
+        employee.setGender(random.nextBoolean() ? "男性" : "女性");
+        employee.setCreated_by("SYSTEM");
+        employee.setCreated_at(now);
+        employee.setUpdated_by("SYSTEM");
+        employee.setUpdated_at(now);
+        employee.setVersion(0L);
+        
+        return employee;
     }
 
     /**
@@ -208,6 +280,83 @@ public class EmployeeService {
      */
     public void saveEmployees(List<Employee> employees) {
         saveEmployeesInParallel(employees);
+    }
+
+    /**
+     * 従業員情報を一時テーブル方式で一括UPSERTします。
+     * バッチサイズごとに分割して処理を行います。
+     *
+     * @param employees UPSERT対象の従業員情報のリスト
+     * @return 全体の処理件数を含むMap（updateCount: 更新件数合計, insertCount: 挿入件数合計）
+     */
+    private java.util.Map<String, Integer> upsertEmployeesViaTempTableInBatches(List<Employee> employees) {
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+        long startTime = System.currentTimeMillis();
+        
+        // ID範囲ごとの件数をカウント
+        long newRecords = employees.stream()
+            .filter(e -> Integer.parseInt(e.getId().substring(1)) >= 10000)
+            .count();
+        long existingRecords = employees.size() - newRecords;
+        
+        System.out.println("\nUpsert operation details (Temp Table method):");
+        System.out.printf("Total records: %d%n", employees.size());
+        System.out.printf("Expected new records (ID >= E010000): %d (%.1f%%)%n",
+            newRecords, (newRecords * 100.0 / employees.size()));
+        System.out.printf("Expected updates (ID < E010000): %d (%.1f%%)%n",
+            existingRecords, (existingRecords * 100.0 / employees.size()));
+        System.out.println("Starting Temp Table operation...\\n");
+
+        int totalUpdateCount = 0;
+        int totalInsertCount = 0;
+
+        try {
+            // バッチ処理
+            List<List<Employee>> batches = new ArrayList<>();
+            for (int i = 0; i < employees.size(); i += BATCH_SIZE) {
+                batches.add(new ArrayList<>(employees.subList(i,
+                    Math.min(i + BATCH_SIZE, employees.size()))));
+            }
+
+            // 並列処理でバッチを実行
+            List<Future<java.util.Map<String, Integer>>> futures = new ArrayList<>();
+            for (List<Employee> batch : batches) {
+                futures.add(executor.submit(() -> employeeMapper.bulkUpsertViaTempTable(batch)));
+            }
+
+            for (Future<java.util.Map<String, Integer>> future : futures) {
+                try {
+                    java.util.Map<String, Integer> result = future.get();
+                    totalUpdateCount += result.get("updateCount");
+                    totalInsertCount += result.get("insertCount");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } finally {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    System.err.println("Executor did not terminate in the specified time.");
+                    List<Runnable> droppedTasks = executor.shutdownNow();
+                    System.err.println("Executor was abruptly shut down. " +
+                        droppedTasks.size() + " tasks were dropped.");
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        
+        long totalTime = System.currentTimeMillis() - startTime;
+        System.out.printf("Temp Table Upsert completed in %.2f seconds%n", totalTime / 1000.0);
+        System.out.printf("Total updates: %d, Total inserts: %d%n", totalUpdateCount, totalInsertCount);
+        
+        java.util.Map<String, Integer> result = new java.util.HashMap<>();
+        result.put("updateCount", totalUpdateCount);
+        result.put("insertCount", totalInsertCount);
+        return result;
     }
 
     /**

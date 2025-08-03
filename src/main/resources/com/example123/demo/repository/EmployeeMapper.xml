@@ -74,4 +74,98 @@
         </foreach>
     </insert>
 
+    <select id="bulkUpsertViaTempTable" parameterType="java.util.List" resultType="map">
+        SET NOCOUNT ON;
+
+        -- 1) #Temp 再作成（同一接続での再実行に備える）
+        IF OBJECT_ID('tempdb..#TempEMP') IS NOT NULL DROP TABLE #TempEMP;
+
+        CREATE TABLE #TempEMP (
+            id                 NVARCHAR(20)   NOT NULL,
+            name               NVARCHAR(100)  NOT NULL,
+            department         NVARCHAR(50)   NOT NULL,
+            position          NVARCHAR(50)   NOT NULL,
+            employment_status NVARCHAR(20)   NOT NULL,
+            hire_date         DATE           NOT NULL,
+            phone_number      NVARCHAR(20)       NULL,
+            email            NVARCHAR(100)       NULL,
+            birth_date       DATE               NULL,
+            gender           NVARCHAR(10)        NULL,
+            created_by       NVARCHAR(50)    NOT NULL,
+            created_at       DATETIME2(3)    NOT NULL,
+            updated_by       NVARCHAR(50)    NOT NULL,
+            updated_at       DATETIME2(3)    NOT NULL,
+            version          INT             NOT NULL
+        );
+
+        -- 2) 一時テーブルへデータ投入（※1行=1文にして2100上限を回避）
+        <foreach collection="list" item="emp" separator=";">
+            INSERT INTO #TempEMP (
+                id, name, department, position, employment_status,
+                hire_date, phone_number, email, birth_date, gender,
+                created_by, created_at, updated_by, updated_at, version
+            ) VALUES (
+                #{emp.id,            jdbcType=NVARCHAR},
+                #{emp.name,          jdbcType=NVARCHAR},
+                #{emp.department,    jdbcType=NVARCHAR},
+                #{emp.position,      jdbcType=NVARCHAR},
+                #{emp.employment_status, jdbcType=NVARCHAR},
+                #{emp.hire_date,     jdbcType=DATE},
+                #{emp.phone_number,  jdbcType=NVARCHAR},
+                #{emp.email,         jdbcType=NVARCHAR},
+                #{emp.birth_date,    jdbcType=DATE},
+                #{emp.gender,        jdbcType=NVARCHAR},
+                #{emp.created_by,    jdbcType=NVARCHAR},
+                #{emp.created_at,    jdbcType=TIMESTAMP},
+                #{emp.updated_by,    jdbcType=NVARCHAR},
+                #{emp.updated_at,    jdbcType=TIMESTAMP},
+                #{emp.version,       jdbcType=INTEGER}
+            )
+        </foreach>
+        
+        ALTER TABLE #TempEMP ADD PRIMARY KEY CLUSTERED (id);
+
+        -- 3) 既存データを更新
+        UPDATE tgt
+           SET tgt.name = src.name,
+               tgt.department = src.department,
+               tgt.position = src.position,
+               tgt.employment_status = src.employment_status,
+               tgt.hire_date = src.hire_date,
+               tgt.phone_number = src.phone_number,
+               tgt.email = src.email,
+               tgt.birth_date = src.birth_date,
+               tgt.gender = src.gender,
+               tgt.updated_by = src.updated_by,
+               tgt.updated_at = SYSUTCDATETIME(),
+               tgt.version = tgt.version + 1
+          FROM employees AS tgt
+          JOIN #TempEMP AS src
+            ON tgt.id = src.id;
+
+        DECLARE @UpdateCount int = @@ROWCOUNT;
+
+        -- 4) 新規データを挿入（NOT EXISTSで未存在のみ。範囲ロックを避ける。重複はPK/UNIQUEに委ね、2601/2627はアプリでリトライ）
+        INSERT INTO employees (
+            id, name, department, position, employment_status,
+            hire_date, phone_number, email, birth_date, gender,
+            created_by, created_at, updated_by, updated_at, version
+        )
+        SELECT
+            src.id, src.name, src.department, src.position, src.employment_status,
+            src.hire_date, src.phone_number, src.email, src.birth_date, src.gender,
+            src.created_by, ISNULL(src.created_at, SYSUTCDATETIME()), src.updated_by, SYSUTCDATETIME(), 0
+        FROM #TempEMP AS src
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM employees 
+          WHERE id = src.id
+        );
+
+        DECLARE @InsertCount int = @@ROWCOUNT;
+
+        -- 5) 結果を返す
+        SELECT @UpdateCount AS updateCount, @InsertCount AS insertCount;
+    </select>
+
 </mapper>

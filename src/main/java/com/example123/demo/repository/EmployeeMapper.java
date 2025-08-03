@@ -36,4 +36,16 @@ public interface EmployeeMapper {
      * @param employees UPSERT対象の従業員情報のリスト
      */
     void bulkUpsert(List<Employee> employees);
+
+    /**
+     * 従業員情報を一括でUPSERT（更新または挿入）します
+     * 一時テーブルを使用して効率的な一括処理を行います
+     *
+     * - 既存レコードの場合：バージョンを増分して更新
+     * - 新規レコードの場合：新しいレコードとして挿入
+     *
+     * @param employees UPSERT対象の従業員情報のリスト
+     * @return 処理件数を含むMap（updateCount: 更新件数, insertCount: 挿入件数）
+     */
+    java.util.Map<String, Integer> bulkUpsertViaTempTable(List<Employee> employees);
 }

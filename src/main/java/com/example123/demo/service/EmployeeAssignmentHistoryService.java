@@ -4,17 +4,19 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.example123.demo.domain.EmployeeAssignmentHistory;
 import com.example123.demo.repository.EmployeeAssignmentHistoryKey;
@@ -39,41 +41,97 @@ public class EmployeeAssignmentHistoryService {
      *
      * @param historyList Upsert対象の配属履歴リスト
      */
-    @Transactional
     public void upsertHistories(List<EmployeeAssignmentHistory> historyList) {
         if (historyList == null || historyList.isEmpty()) {
             return;
         }
         
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         long startTime = System.currentTimeMillis();
-        System.out.printf("Upserting %d assignment histories...%n", historyList.size());
-
-        // バッチ処理
-        List<List<EmployeeAssignmentHistory>> batches = new ArrayList<>();
-        for (int i = 0; i < historyList.size(); i += BATCH_SIZE) {
-            batches.add(new ArrayList<>(historyList.subList(i,
-                    Math.min(i + BATCH_SIZE, historyList.size()))));
-        }
-
-        int totalUpdates = 0;
-        int totalInserts = 0;
-
-        for(List<EmployeeAssignmentHistory> batch : batches) {
-            Map<String, Integer> counts = mapper.upsertViaTempTable(batch);
-            totalUpdates += counts.get("updateCount");
-            totalInserts += counts.get("insertCount");
-        }
         
-        long totalTime = System.currentTimeMillis() - startTime;
-        System.out.printf("Assignment history upsert completed in %.2f seconds%n", totalTime / 1000.0);
-        System.out.printf("Updates: %d records, Inserts: %d records%n", totalUpdates, totalInserts);
+        System.out.printf("Upserting %d assignment histories with %d threads...%n", historyList.size(), numThreads);
 
-        // サンプルデータのパターンを表示
-        if (!historyList.isEmpty()) {
-            EmployeeAssignmentHistory sample = historyList.get(0);
-            System.out.println("\nEmployee ID pattern examples:");
-            System.out.printf("Update pattern (random): E%06d%n", random.nextInt(historyList.size()));
-            System.out.printf("Insert pattern (sequential): E%06d%n", historyList.size() - 1);
+        try {
+            // バッチ処理
+            List<List<EmployeeAssignmentHistory>> batches = new ArrayList<>();
+            for (int i = 0; i < historyList.size(); i += BATCH_SIZE) {
+                batches.add(new ArrayList<>(historyList.subList(i,
+                        Math.min(i + BATCH_SIZE, historyList.size()))));
+            }
+
+            // 並列処理でバッチを実行
+            List<Future<Map<String, Integer>>> futures = new ArrayList<>();
+            for (List<EmployeeAssignmentHistory> batch : batches) {
+                futures.add(executor.submit(() -> mapper.upsertViaTempTable(batch)));
+            }
+
+            // 結果を集計
+            int totalUpdates = 0;
+            int totalInserts = 0;
+            
+            for (Future<Map<String, Integer>> future : futures) {
+                try {
+                    Map<String, Integer> counts = future.get();
+                    totalUpdates += counts.get("updateCount");
+                    totalInserts += counts.get("insertCount");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            
+            long totalTime = System.currentTimeMillis() - startTime;
+            System.out.printf("Assignment history upsert completed in %.2f seconds%n", totalTime / 1000.0);
+            System.out.printf("Updates: %d records, Inserts: %d records%n", totalUpdates, totalInserts);
+
+            // 実際に処理されたデータのサンプルを表示
+            if (!historyList.isEmpty() && (totalUpdates > 0 || totalInserts > 0)) {
+                System.out.println("\n=== 処理されたデータのサンプル ===");
+                
+                // 更新されたデータのサンプル表示
+                if (totalUpdates > 0) {
+                    System.out.printf("更新データのサンプル（%d件中）:%n", totalUpdates);
+                    // 既存データから更新用サンプルを特定（概算）
+                    int updateSampleCount = Math.min(3, totalUpdates);
+                    for (int i = 0; i < updateSampleCount && i < historyList.size(); i++) {
+                        EmployeeAssignmentHistory sample = historyList.get(i);
+                        System.out.printf("  - Employee ID: %s, Org: %s, Job: %s, Status: %s%n",
+                            sample.getEmployeeId(),
+                            sample.getOrgCode(),
+                            sample.getJobCode(),
+                            sample.getStatusCode());
+                    }
+                }
+                
+                // 新規挿入されたデータのサンプル表示
+                if (totalInserts > 0) {
+                    System.out.printf("新規挿入データのサンプル（%d件中）:%n", totalInserts);
+                    // 新規データから挿入用サンプルを特定（概算）
+                    int insertSampleCount = Math.min(3, totalInserts);
+                    int startIndex = Math.max(0, historyList.size() - totalInserts);
+                    for (int i = 0; i < insertSampleCount && (startIndex + i) < historyList.size(); i++) {
+                        EmployeeAssignmentHistory sample = historyList.get(startIndex + i);
+                        System.out.printf("  - Employee ID: %s, Org: %s, Job: %s, Status: %s%n",
+                            sample.getEmployeeId(),
+                            sample.getOrgCode(),
+                            sample.getJobCode(),
+                            sample.getStatusCode());
+                    }
+                }
+            }
+        } finally {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    System.err.println("Executor did not terminate in the specified time.");
+                    List<Runnable> droppedTasks = executor.shutdownNow();
+                    System.err.println("Executor was abruptly shut down. " +
+                        droppedTasks.size() + " tasks were dropped.");
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
