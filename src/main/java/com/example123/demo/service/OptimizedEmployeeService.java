@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -96,10 +98,10 @@ public class OptimizedEmployeeService {
                 }
             });
 
-            // 一時ファイルを作成
-            File tempFile = File.createTempFile("sort-", ".csv");
+            // 一時ファイルを作成（セキュアな権限で）
+            Path tempFile = Files.createTempFile("sort-", ".csv");
             
-            BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+            BufferedWriter writer = Files.newBufferedWriter(tempFile);
             try {
                 // 拡張forループとStringBuilderでCSV文字列を生成
                 for (Employee employee : this.employees) {
@@ -113,7 +115,7 @@ public class OptimizedEmployeeService {
             } finally {
                 writer.close();
             }
-            return tempFile;
+            return tempFile.toFile();
         }
     }
 
