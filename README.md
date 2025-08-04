@@ -221,6 +221,75 @@ mvn spring-boot:run
    - SQLServerのパラメーター制限への対応
    - 効率的なバッチ処理
 
+## REST API エンドポイント
+
+### 従業員データAPI
+
+#### 1. MERGE文によるUPSERT処理のテスト
+```
+POST /api/employees/test-merge-upsert
+```
+- 従業員テーブルをクリア後、MERGE文を使用したUPSERT処理をテスト
+- 3,000件のランダム従業員データを生成・処理
+- レスポンス: 実行時間、処理方式、ステータス
+
+#### 2. 一時テーブルによるUPSERT処理のテスト
+```
+POST /api/employees/test-temp-table-upsert
+```
+- 従業員テーブルをクリア後、一時テーブルを使用したUPSERT処理をテスト
+- 3,000件のランダム従業員データを生成・処理
+- レスポンス: 実行時間、更新件数、挿入件数、処理方式、ステータス
+
+### 配属履歴データAPI
+
+#### 1. 配属履歴のUPSERT処理
+```
+POST /assignment-histories/upsert?count=10000
+```
+- パラメータ: `count` (デフォルト: 10000) - 生成するデータ件数
+- 指定件数の配属履歴データを生成し、UPDATE後INSERT方式でUPSERT処理
+- 更新比率80%、新規挿入20%の割合でデータを生成
+- レスポンス: 処理完了メッセージまたはエラー情報
+
+### API使用例
+
+#### Bash/Linux/macOS環境
+```bash
+# 従業員データのMERGE UPSERT処理をテスト
+curl -X POST http://localhost:8080/api/employees/test-merge-upsert
+
+# 従業員データの一時テーブルUPSERT処理をテスト
+curl -X POST http://localhost:8080/api/employees/test-temp-table-upsert
+
+# 配属履歴データを5000件でUPSERT処理
+curl -X POST "http://localhost:8080/assignment-histories/upsert?count=5000"
+```
+
+#### PowerShell環境
+```powershell
+# 従業員データのMERGE UPSERT処理をテスト
+Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-merge-upsert" -Method Post
+
+# 従業員データの一時テーブルUPSERT処理をテスト
+Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-temp-table-upsert" -Method Post
+
+# 配属履歴データを5000件でUPSERT処理
+Invoke-RestMethod -Uri "http://localhost:8080/assignment-histories/upsert?count=5000" -Method Post
+```
+
+#### Windows Command Prompt環境
+```cmd
+REM 従業員データのMERGE UPSERT処理をテスト
+curl -X POST http://localhost:8080/api/employees/test-merge-upsert
+
+REM 従業員データの一時テーブルUPSERT処理をテスト
+curl -X POST http://localhost:8080/api/employees/test-temp-table-upsert
+
+REM 配属履歴データを5000件でUPSERT処理
+curl -X POST "http://localhost:8080/assignment-histories/upsert?count=5000"
+```
+
 ## 今後の展望
 - WebUIの追加
 - より詳細な検索機能
