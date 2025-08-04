@@ -1,3 +1,25 @@
+-- ★ 従業員マスターテーブル
+CREATE TABLE dbo.employees (
+    id                   VARCHAR(255)      NOT NULL,
+    name                 VARCHAR(255)      NULL,
+    department           VARCHAR(255)      NULL,
+    position             VARCHAR(255)      NULL,
+    employment_status    VARCHAR(255)      NULL,
+    hire_date            DATE              NULL,
+    phone_number         VARCHAR(255)      NULL,
+    email                VARCHAR(255)      NULL,
+    birth_date           DATE              NULL,
+    gender               VARCHAR(50)       NULL,
+    created_by           VARCHAR(255)      NULL,
+    created_at           DATETIME          NULL,
+    updated_by           VARCHAR(255)      NULL,
+    updated_at           DATETIME          NULL,
+    version              BIGINT            NULL,
+    
+    CONSTRAINT PK_employees PRIMARY KEY CLUSTERED (id)
+);
+
+-- ★ 従業員配属履歴テーブル
 CREATE TABLE dbo.employee_assignment_history (
     -- ★ 複合主キー（5要素）
     employee_id          NVARCHAR(20)  NOT NULL,
