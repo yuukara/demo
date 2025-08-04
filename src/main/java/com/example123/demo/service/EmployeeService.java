@@ -306,7 +306,7 @@ public class EmployeeService {
             newRecords, (newRecords * 100.0 / employees.size()));
         System.out.printf("Expected updates (ID < E010000): %d (%.1f%%)%n",
             existingRecords, (existingRecords * 100.0 / employees.size()));
-        System.out.println("Starting Temp Table operation...\\n");
+        System.out.println("Starting Temp Table operation...\n");
 
         int totalUpdateCount = 0;
         int totalInsertCount = 0;
