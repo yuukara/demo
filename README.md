@@ -1,7 +1,7 @@
 # 従業員情報管理システム
 
 ## 概要
-このプロジェクトは、大規模な従業員データを効率的に管理・処理するデモアプリケーションです。
+このプロジェクトは、大規模な従業員データとその配属履歴を効率的に管理・処理するデモアプリケーションです。
 マルチスレッド処理を活用し、高速なデータ処理と性能比較機能を提供します。
 
 ## アーキテクチャと処理フロー
@@ -29,8 +29,11 @@ sequenceDiagram
 
 *   **DemoApplication**: アプリケーションのエントリーポイント。`CommandLineRunner` を使用して、起動時に一連のデータ処理タスクを実行します。
 *   **EmployeeService**: 従業員データの生成、バリデーション、データベースへの保存（UPSERT）、CSV出力といった中心的なビジネスロジックを担います。マルチスレッド処理による最適化もこのクラスで実装されています。
+*   **EmployeeAssignmentHistoryService**: 従業員の配属履歴データの管理を担うサービスクラス。UPDATE後INSERT方式による一括UPSERT機能を提供し、複合キーを持つ配属履歴データの効率的な処理を実現します。
 *   **EmployeeMapper**: MyBatisのMapperインターフェース。`EmployeeMapper.xml` に定義されたSQLクエリを呼び出し、データベースとのやり取りを抽象化します。
+*   **EmployeeAssignmentHistoryMapper**: 配属履歴テーブル専用のMapperインターフェース。複合キーによる一時テーブルを利用したUPSERT処理を実装します。
 *   **EmployeeMapper.xml**: 実際のSQLクエリ（`MERGE`文など）を記述するXMLファイルです。
+*   **EmployeeAssignmentHistoryMapper.xml**: 配属履歴テーブルのUPSERT処理を実装するXMLファイル。一時テーブルを活用したUPDATE後INSERT方式を採用しています。
 
 ## 主な機能
 
@@ -41,7 +44,18 @@ sequenceDiagram
   - 個人情報（生年月日、性別、連絡先など）
   - 管理情報（登録者、更新者、タイムスタンプ、バージョン）
 
-### 2. 高速データ処理
+### 2. 従業員配属履歴管理
+- 複合キー（従業員ID、組織コード、職務コード、効力開始日、連番）による配属履歴管理
+- 30個を超えるカラムを持つ詳細な配属情報
+  - 基本配属情報（組織、職務、ロケーション、雇用形態など）
+  - 管理情報（グレード、給与バンド、マネージャー、プロジェクトなど）
+  - 勤務パターン（リモートワーク可否、FTE比率、シフト情報など）
+  - 拡張属性（attr1-attr12）と監査情報
+- UPDATE後INSERT方式による一括UPSERT処理
+  - 一時テーブルを活用した効率的な更新・挿入処理
+  - マルチスレッド対応による高速処理
+
+### 3. 高速データ処理
 - マルチスレッドによる並列処理
 - SQLServerのパラメーター制限に対応（1回の処理で2100パラメーター以下）
 - バッチサイズの最適化（100レコード/バッチ）
@@ -50,12 +64,12 @@ sequenceDiagram
   - バージョン管理による楽観的ロック
   - 新規レコード15%、更新85%の比率制御
 
-### 3. CSV出力機能
+### 4. CSV出力機能
 - マルチスレッド処理によるCSVファイル生成
 - シングルスレッド処理との性能比較機能
 - 全カラムのデータをCSV形式で出力
 
-### 4. 性能測定・比較
+### 5. 性能測定・比較
 - 処理時間の測定と表示
 - マルチスレッドと単一スレッドの性能比較
 - 安全な処理と非安全な処理の性能比較
@@ -95,6 +109,45 @@ CREATE TABLE employees (
     updated_at DATETIME,
     version BIGINT
 );
+
+CREATE TABLE employee_assignment_history (
+    employee_id NVARCHAR(20) NOT NULL,
+    org_code NVARCHAR(10) NOT NULL,
+    job_code NVARCHAR(10) NOT NULL,
+    effective_from DATE NOT NULL,
+    seq_no INT NOT NULL,
+    effective_to DATE NULL,
+    status_code NVARCHAR(10) NULL,
+    base_location_code NVARCHAR(10) NULL,
+    employment_type NVARCHAR(10) NULL,
+    grade_code NVARCHAR(10) NULL,
+    salary_band_code NVARCHAR(10) NULL,
+    manager_emp_id NVARCHAR(20) NULL,
+    project_code NVARCHAR(20) NULL,
+    cost_center_code NVARCHAR(20) NULL,
+    work_pattern_code NVARCHAR(10) NULL,
+    shift_group_code NVARCHAR(10) NULL,
+    allow_remote BIT NULL,
+    fte_ratio DECIMAL(5,2) NULL,
+    attr1 NVARCHAR(100) NULL,
+    attr2 NVARCHAR(100) NULL,
+    attr3 NVARCHAR(100) NULL,
+    attr4 NVARCHAR(100) NULL,
+    attr5 NVARCHAR(100) NULL,
+    attr6 NVARCHAR(100) NULL,
+    attr7 NVARCHAR(100) NULL,
+    attr8 NVARCHAR(100) NULL,
+    attr9 NVARCHAR(100) NULL,
+    attr10 NVARCHAR(100) NULL,
+    attr11 NVARCHAR(100) NULL,
+    attr12 NVARCHAR(100) NULL,
+    created_at DATETIME2(3) NULL,
+    created_by NVARCHAR(50) NULL,
+    updated_at DATETIME2(3) NULL,
+    updated_by NVARCHAR(50) NULL,
+    rv ROWVERSION,
+    PRIMARY KEY (employee_id, org_code, job_code, effective_from, seq_no)
+);
 ```
 
 2. アプリケーション設定
@@ -117,7 +170,7 @@ mvn spring-boot:run
 
 ## 主な機能の詳細
 
-### MERGE文による一括UPSERT
+### MERGE文による一括UPSERT（従業員テーブル）
 - SQLServerのMERGE文を使用した効率的なUPSERT処理
 - 特徴：
   - ID範囲による新規/更新の制御（E000000-E009999: 更新、E010000-E099999: 新規）
@@ -125,9 +178,18 @@ mvn spring-boot:run
   - マルチスレッドによる並列処理
   - バッチサイズの最適化によるパフォーマンス確保
 
+### UPDATE後INSERT方式（配属履歴テーブル）
+- 一時テーブルを活用した効率的なUPSERT処理
+- 特徴：
+  - 複合キーによるマッチング（従業員ID、組織コード、職務コード、効力開始日、連番）
+  - 先に既存レコードをUPDATE、その後存在しないレコードをINSERT
+  - パラメーター制限回避のため1行ずつINSERT文を生成
+  - マルチスレッド対応（バッチサイズ：50レコード/バッチ）
+
 ### データベース制約への対応
 - SQLServerのパラメーター制限（2100）を考慮
-- 15カラム × 100レコード = 1500パラメーターでバッチサイズを設定
+- 従業員テーブル：15カラム × 100レコード = 1500パラメーターでバッチサイズを設定
+- 配属履歴テーブル：30+カラムのため1行ずつINSERT（パラメーター制限回避）
 - セミコロンによるMERGE文の適切な終端処理
 
 ## マルチスレッド処理の詳細
@@ -137,8 +199,8 @@ mvn spring-boot:run
    - スレッド間の競合を最小限に抑えるデータ分割戦略
 
 2. データ処理の粒度
-   - 最適なバッチサイズ：100件/バッチ
-   - 3,000件のデータを30バッチに分割して並列処理
+   - 従業員テーブル：最適なバッチサイズ100件/バッチ（3,000件を30バッチに分割）
+   - 配属履歴テーブル：最適なバッチサイズ50件/バッチ（一時テーブル方式採用）
    - SQLServerのパラメーター制限（2100）を考慮したバッチ設計
 
 3. 処理性能の最適化
@@ -164,6 +226,8 @@ mvn spring-boot:run
 - より詳細な検索機能
 - レポート出力機能
 - バッチ処理の更なる最適化
+- 配属履歴の時系列分析機能
+- 組織変更の影響分析機能
 
 ## ライセンス
 MIT License
