@@ -115,7 +115,7 @@ public class OptimizedEmployeeService {
             } finally {
                 writer.close();
             }
-            return tempFile;
+            return tempFile.toFile();
         }
     }
 
