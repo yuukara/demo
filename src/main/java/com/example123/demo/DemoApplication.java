@@ -13,7 +13,6 @@ import com.example123.demo.repository.EmployeeMapper;
 import com.example123.demo.service.EmployeeService;
 import com.example123.demo.service.PopulationDataService;
 import com.example123.demo.service.SafeDataProcessingService;
-import com.example123.demo.service.UnsafeDataProcessingService;
 
 /**
  * 従業員情報管理デモアプリケーション
@@ -21,7 +20,7 @@ import com.example123.demo.service.UnsafeDataProcessingService;
  * 以下の機能を提供します：
  * 1. 大量の従業員データの生成とデータベース保存
  * 2. マルチスレッドとシングルスレッドでのCSVファイル生成の性能比較
- * 3. 安全なデータ処理と非安全なデータ処理の性能比較
+ * 3. 安全なデータ処理サービスによる並列処理テスト
  * 4. 人口データの読み込みテスト
  */
 @SpringBootApplication
@@ -40,23 +39,21 @@ public class DemoApplication {
      * アプリケーション起動時に実行されるコマンドラインランナー
      * 各種データ処理とパフォーマンステストを実行します
      *
-     * @param employeeService 従業員情報管理サービス
      * @param populationDataService 人口データ管理サービス
-     * @param unsafeService 非安全なデータ処理サービス
      * @param safeService 安全なデータ処理サービス
      * @param employeeMapper 従業員情報マッパー
      * @return CommandLineRunner インスタンス
      */
     @Bean
     public CommandLineRunner run(PopulationDataService populationDataService,
-                                 UnsafeDataProcessingService unsafeService, SafeDataProcessingService safeService,
+                                 SafeDataProcessingService safeService,
                                  EmployeeMapper employeeMapper) {
         return args -> {
             // employeeController.testMergeUpsert();  // 一時的に無効化
 
             // 以下の処理も引き続き無効化
             // runEmployeeAndPopulationTasks(employeeService, populationDataService, employeeMapper);
-            // runDataProcessingTasks(unsafeService, safeService);
+            // runDataProcessingTasks(safeService);
         };
     }
 
@@ -138,24 +135,14 @@ public class DemoApplication {
     }
 
     /**
-     * データ処理サービスの性能比較を実行します
-     * 安全な処理と非安全な処理の実行時間を比較します
+     * データ処理サービスの安全性テストを実行します
+     * SafeDataProcessingServiceを使用して安全なデータ処理を行います
      *
-     * @param unsafeService 非安全なデータ処理サービス
      * @param safeService 安全なデータ処理サービス
      */
-    private void runDataProcessingTasks(UnsafeDataProcessingService unsafeService,
-                                      SafeDataProcessingService safeService) {
-        System.out.println("\n\n=== Data Processing Service Comparison ===");
+    private void runDataProcessingTasks(SafeDataProcessingService safeService) {
+        System.out.println("\n\n=== Safe Data Processing Service Test ===");
         final int DATA_SIZE = 10_000_000;
-
-        // --- Unsafe (Original) Service ---
-        System.out.println("\n--- Running UnsafeDataProcessingService ---");
-        long startUnsafe = System.currentTimeMillis();
-        List<Integer> unsafeResult = unsafeService.processData(DATA_SIZE);
-        long unsafeTime = System.currentTimeMillis() - startUnsafe;
-        System.out.printf("Unsafe service processed %d records in %.2f seconds%n",
-            unsafeResult.size(), unsafeTime / 1000.0);
 
         // --- Safe (Chunked) Service ---
         System.out.println("\n--- Running SafeDataProcessingService ---");
@@ -165,13 +152,11 @@ public class DemoApplication {
         System.out.printf("Safe service processed %d records in %.2f seconds%n",
             safeResult.size(), safeTime / 1000.0);
 
-        // --- Performance Comparison ---
-        System.out.println("\n=== Performance Comparison (Data Processing) ===");
-        System.out.printf("Unsafe Service Time: %.2f seconds%n", unsafeTime / 1000.0);
-        System.out.printf("Safe Service Time:   %.2f seconds%n", safeTime / 1000.0);
-        if (safeTime > 0) {
-            double speedup = (double) unsafeTime / safeTime;
-            System.out.printf("Speed-up ratio: %.2fx%n", speedup);
-        }
+        // データ整合性チェック
+        boolean dataIntegrityOk = safeResult.size() == DATA_SIZE;
+        System.out.printf("Data integrity check: %s (Expected: %d, Actual: %d)%n",
+            dataIntegrityOk ? "PASS" : "FAIL", DATA_SIZE, safeResult.size());
+
+        System.out.println("Safe data processing test completed successfully.");
     }
 }

@@ -1,7 +1,6 @@
-package com.example123.demo.domain;
+package com.example123.demo.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -13,13 +12,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 従業員情報を管理するエンティティクラス
- * 従業員の基本情報、個人情報、システム管理情報を保持します
+ * 従業員情報のデータ転送オブジェクト
+ * APIの入力データ検証に使用されます
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Employee {
+public class EmployeeDTO {
+    
     /** 従業員ID - 主キー */
     @NotBlank(message = "従業員IDは必須です")
     @Size(max = 20, message = "従業員IDは20文字以内で入力してください")
@@ -65,25 +65,4 @@ public class Employee {
     /** 性別 */
     @Pattern(regexp = "男性|女性", message = "性別は男性または女性を選択してください")
     private String gender;
-
-    /** レコード登録者 */
-    private String created_by;
-
-    /** レコード登録日時 */
-    private LocalDateTime created_at;
-
-    /** レコード更新者 */
-    private String updated_by;
-
-    /** レコード更新日時 */
-    private LocalDateTime updated_at;
-
-    /** 排他制御用バージョン番号 - 楽観的ロックに使用 */
-    private Long version;
-    public Employee(String id, String name, String department, String email) {
-        this.id = id;
-        this.name = name;
-        this.department = department;
-        this.email = email;
-    }
 }
