@@ -10,10 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +27,7 @@ public class OptimizedEmployeeService {
     private static final int BATCH_SIZE = 1000;
 
     public List<Employee> createDummyEmployees(int count) {
-        List<Employee> employees = new ArrayList<Employee>();
+        List<Employee> employees = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             String id = String.valueOf(i + 1);
             String name = "Employee " + id;
@@ -42,14 +40,15 @@ public class OptimizedEmployeeService {
         return employees;
     }
 
+    @SuppressWarnings("CallToPrintStackTrace")
     public void writeToCsv(List<Employee> employees, String filePath) throws IOException {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        List<File> tempFiles = new ArrayList<File>();
+        List<File> tempFiles = new ArrayList<>();
         
         try {
             // ステップ1 & 2: 並列でソート済み一時ファイルを作成
-            List<Future<File>> futures = new ArrayList<Future<File>>();
+            List<Future<File>> futures = new ArrayList<>();
             for (int i = 0; i < employees.size(); i += BATCH_SIZE) {
                 List<Employee> batch = employees.subList(i, Math.min(i + BATCH_SIZE, employees.size()));
                 futures.add(executor.submit(new SortAndWriteTask(batch)));
@@ -62,7 +61,8 @@ public class OptimizedEmployeeService {
             // ステップ3: 一時ファイルをマージ
             mergeSortedFiles(tempFiles, filePath);
 
-        } catch (Exception e) {
+        } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
+            // 意図的なデバッグ出力のため警告を抑制
             e.printStackTrace();
         } finally {
             executor.shutdown();
@@ -85,24 +85,21 @@ public class OptimizedEmployeeService {
         private final List<Employee> employees;
 
         public SortAndWriteTask(List<Employee> employees) {
-            this.employees = new ArrayList<Employee>(employees); // defensive copy
+            this.employees = new ArrayList<>(employees); // defensive copy
         }
 
         @Override
         public File call() throws IOException {
             // 従業員IDでソート (Comparatorを匿名クラスで実装)
-            Collections.sort(this.employees, new Comparator<Employee>() {
-                public int compare(Employee e1, Employee e2) {
-                    // IDを整数として比較
-                    return Integer.valueOf(e1.getId()).compareTo(Integer.valueOf(e2.getId()));
-                }
+            Collections.sort(this.employees, (e1, e2) -> {
+                // IDを整数として比較
+                return Integer.valueOf(e1.getId()).compareTo(Integer.valueOf(e2.getId()));
             });
 
             // 一時ファイルを作成（セキュアな権限で）
             Path tempFile = Files.createTempFile("sort-", ".csv");
             
-            BufferedWriter writer = Files.newBufferedWriter(tempFile);
-            try {
+            try (BufferedWriter writer = Files.newBufferedWriter(tempFile)) {
                 // 拡張forループとStringBuilderでCSV文字列を生成
                 for (Employee employee : this.employees) {
                     StringBuilder sb = new StringBuilder();
@@ -112,8 +109,6 @@ public class OptimizedEmployeeService {
                     sb.append(employee.getEmail()).append("\n");
                     writer.write(sb.toString());
                 }
-            } finally {
-                writer.close();
             }
             return tempFile.toFile();
         }
@@ -122,14 +117,12 @@ public class OptimizedEmployeeService {
     /**
      * 複数のソート済み一時ファイルをマージする (Java 6互換)
      */
+    @SuppressWarnings("CallToPrintStackTrace")
     private void mergeSortedFiles(List<File> files, String outputPath) throws IOException {
-        PriorityQueue<FileRecord> pq = new PriorityQueue<FileRecord>(files.size(), new Comparator<FileRecord>() {
-            public int compare(FileRecord r1, FileRecord r2) {
-                return Integer.valueOf(r1.getEmployeeId()).compareTo(Integer.valueOf(r2.getEmployeeId()));
-            }
-        });
+        PriorityQueue<FileRecord> pq = new PriorityQueue<>(files.size(), 
+            (r1, r2) -> Integer.valueOf(r1.getEmployeeId()).compareTo(Integer.valueOf(r2.getEmployeeId())));
 
-        List<BufferedReader> readers = new ArrayList<BufferedReader>();
+        List<BufferedReader> readers = new ArrayList<>();
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));
 
         try {
