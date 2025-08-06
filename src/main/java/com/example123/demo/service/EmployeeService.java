@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.example123.demo.domain.Employee;
-import com.example123.demo.repository.EmployeeMapper;
 
 /**
  * 従業員情報を管理するコアサービスクラス
@@ -14,16 +13,13 @@ import com.example123.demo.repository.EmployeeMapper;
 @Service
 public class EmployeeService {
 
-    private final EmployeeMapper employeeMapper;
     private final DataGenerationService dataGenerationService;
     private final CsvExportService csvExportService;
     private final EmployeeDataService employeeDataService;
 
-    public EmployeeService(EmployeeMapper employeeMapper, 
-                          DataGenerationService dataGenerationService,
+    public EmployeeService(DataGenerationService dataGenerationService,
                           CsvExportService csvExportService,
                           EmployeeDataService employeeDataService) {
-        this.employeeMapper = employeeMapper;
         this.dataGenerationService = dataGenerationService;
         this.csvExportService = csvExportService;
         this.employeeDataService = employeeDataService;

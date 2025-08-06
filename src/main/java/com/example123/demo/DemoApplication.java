@@ -1,5 +1,6 @@
 package com.example123.demo;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.boot.CommandLineRunner;
@@ -65,6 +66,7 @@ public class DemoApplication {
      * @param populationDataService 人口データ管理サービス
      * @param employeeMapper 従業員情報マッパー
      */
+    @SuppressWarnings({"unused", "CallToPrintStackTrace"})
     private void runEmployeeAndPopulationTasks(EmployeeService employeeService,
                                              PopulationDataService populationDataService,
                                              EmployeeMapper employeeMapper) {
@@ -128,8 +130,9 @@ public class DemoApplication {
                     sample.getYear(),
                     sample.getTotalPopulationEstimate());
             }
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             System.err.println("Error loading population data: " + e.getMessage());
+            // 意図的なデバッグ出力
             e.printStackTrace();
         }
     }
@@ -140,6 +143,7 @@ public class DemoApplication {
      *
      * @param safeService 安全なデータ処理サービス
      */
+    @SuppressWarnings("unused")
     private void runDataProcessingTasks(SafeDataProcessingService safeService) {
         System.out.println("\n\n=== Safe Data Processing Service Test ===");
         final int DATA_SIZE = 10_000_000;

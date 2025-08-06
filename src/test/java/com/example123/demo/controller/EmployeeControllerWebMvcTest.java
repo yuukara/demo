@@ -13,11 +13,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.example123.demo.service.EmployeeService;
+import com.example123.demo.service.PopulationDataService;
+import com.example123.demo.service.SafeDataProcessingService;
+import com.example123.demo.repository.EmployeeMapper;
 
 /**
  * EmployeeController WebMvcテストクラス
@@ -29,8 +32,22 @@ public class EmployeeControllerWebMvcTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private EmployeeService employeeService;
+    
+    // These beans are required for DemoApplication.run() method during Spring context loading
+    // Suppressing unused warnings as they're not directly used in tests but needed for context initialization
+    @SuppressWarnings("unused")
+    @MockitoBean
+    private PopulationDataService populationDataService;
+    
+    @SuppressWarnings("unused")
+    @MockitoBean
+    private SafeDataProcessingService safeDataProcessingService;
+    
+    @SuppressWarnings("unused")
+    @MockitoBean
+    private EmployeeMapper employeeMapper;
 
     @Test
     public void testMergeUpsertApiEndpoint() throws Exception {

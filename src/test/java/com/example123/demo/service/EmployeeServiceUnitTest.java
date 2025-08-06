@@ -2,10 +2,7 @@ package com.example123.demo.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,7 +19,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example123.demo.domain.Employee;
-import com.example123.demo.repository.EmployeeMapper;
 
 /**
  * EmployeeService単体テストクラス
@@ -30,9 +26,6 @@ import com.example123.demo.repository.EmployeeMapper;
  */
 @ExtendWith(MockitoExtension.class)
 public class EmployeeServiceUnitTest {
-
-    @Mock
-    private EmployeeMapper employeeMapper;
 
     @Mock
     private DataGenerationService dataGenerationService;
@@ -46,8 +39,11 @@ public class EmployeeServiceUnitTest {
     private EmployeeService employeeService;
 
     @BeforeEach
+    @SuppressWarnings("unused") // JUnit @BeforeEachによる自動実行のためIDEが使用を検出できない
     void setUp() {
-        employeeService = new EmployeeService(employeeMapper, dataGenerationService, 
+        // EmployeeServiceインスタンスを初期化
+        // このメソッドは@BeforeEachにより各テスト実行前に自動で呼び出される
+        employeeService = new EmployeeService(dataGenerationService, 
                                             csvExportService, employeeDataService);
     }
 
