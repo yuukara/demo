@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -25,6 +27,8 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 public class EmployeeControllerApiTest {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeControllerApiTest.class);
+
     @LocalServerPort
     private int port;
 
@@ -37,7 +41,7 @@ public class EmployeeControllerApiTest {
         // API URL構築
         String url = "http://localhost:" + port + "/api/employees/test-merge-upsert";
         
-        System.out.println("Testing MERGE-based UPSERT API: " + url);
+        log.info("Testing MERGE-based UPSERT API: {}", url);
         
         // API呼び出し
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
@@ -65,9 +69,9 @@ public class EmployeeControllerApiTest {
         long executionTime = ((Number) executionTimeObj).longValue();
         assertTrue(executionTime >= 0, "Execution time should be non-negative");
         
-        System.out.println("MERGE UPSERT API Test - SUCCESS");
-        System.out.println("Execution Time: " + executionTime + "ms");
-        System.out.println("Response: " + responseBody);
+        log.info("MERGE UPSERT API Test - SUCCESS");
+        log.info("Execution Time: {}ms", executionTime);
+        log.debug("Response: {}", responseBody);
     }
 
     @Test
@@ -76,7 +80,7 @@ public class EmployeeControllerApiTest {
         // API URL構築
         String url = "http://localhost:" + port + "/api/employees/test-temp-table-upsert";
         
-        System.out.println("Testing Temp Table-based UPSERT API: " + url);
+        log.info("Testing Temp Table-based UPSERT API: {}", url);
         
         // API呼び出し
         ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
@@ -127,19 +131,17 @@ public class EmployeeControllerApiTest {
         int totalCount = updateCount + insertCount;
         assertEquals(6000, totalCount, "Total processed records should be 6000");
         
-        System.out.println("TEMP TABLE UPSERT API Test - SUCCESS");
-        System.out.println("Execution Time: " + executionTime + "ms");
-        System.out.println("Update Count: " + updateCount);
-        System.out.println("Insert Count: " + insertCount);
-        System.out.println("Total Count: " + totalCount);
-        System.out.println("Response: " + responseBody);
+        log.info("TEMP TABLE UPSERT API Test - SUCCESS");
+        log.info("Execution Time: {}ms", executionTime);
+        log.info("Update Count: {}, Insert Count: {}, Total Count: {}", updateCount, insertCount, totalCount);
+        log.debug("Response: {}", responseBody);
     }
 
     @Test
     @SuppressWarnings("null")
     public void testBothApisSequentially() {
         // 両方のAPIを順次呼び出して、干渉がないことを確認
-        System.out.println("\n=== Testing Both APIs Sequentially ===");
+        log.info("=== Testing Both APIs Sequentially ===");
         
         // 1. MERGE UPSERT APIの呼び出し
         String mergeUrl = "http://localhost:" + port + "/api/employees/test-merge-upsert";
@@ -149,7 +151,7 @@ public class EmployeeControllerApiTest {
         
         Map<String, Object> mergeResult = mergeResponse.getBody();
         assertNotNull(mergeResult, "Merge result should not be null");
-        System.out.println("First API (MERGE) completed: " + mergeResult.get("status"));
+        log.info("First API (MERGE) completed: {}", mergeResult.get("status"));
         
         // 2. Temp Table UPSERT APIの呼び出し
         String tempTableUrl = "http://localhost:" + port + "/api/employees/test-temp-table-upsert";
@@ -159,12 +161,12 @@ public class EmployeeControllerApiTest {
         
         Map<String, Object> tempTableResult = tempTableResponse.getBody();
         assertNotNull(tempTableResult, "Temp table result should not be null");
-        System.out.println("Second API (Temp Table) completed: " + tempTableResult.get("status"));
+        log.info("Second API (Temp Table) completed: {}", tempTableResult.get("status"));
         
         // 両方とも成功していることを確認
         assertEquals("completed", mergeResult.get("status"));
         assertEquals("completed", tempTableResult.get("status"));
         
-        System.out.println("Sequential API Test - SUCCESS");
+        log.info("Sequential API Test - SUCCESS");
     }
 }

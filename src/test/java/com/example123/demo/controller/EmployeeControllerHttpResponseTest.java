@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -23,6 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 public class EmployeeControllerHttpResponseTest {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeControllerHttpResponseTest.class);
+
     @Mock
     private EmployeeService employeeService;
 
@@ -37,7 +41,7 @@ public class EmployeeControllerHttpResponseTest {
 
     @Test
     void testMergeUpsertApiHttpResponse() throws JsonProcessingException {
-        System.out.println("\n=== Testing MERGE UPSERT API HTTP Response ===");
+        log.info("=== Testing MERGE UPSERT API HTTP Response ===");
         
         // API実行
         Map<String, Object> response = employeeController.testMergeUpsert(6000);
@@ -45,8 +49,8 @@ public class EmployeeControllerHttpResponseTest {
         // JSONレスポンスの生成と検証
         String jsonResponse = objectMapper.writeValueAsString(response);
         
-        System.out.println("HTTP Response (JSON):");
-        System.out.println(jsonResponse);
+        log.info("HTTP Response (JSON):");
+        log.info(jsonResponse);
         
         // JSONが正しく生成されることを確認
         assertNotNull(jsonResponse, "JSON response should not be null");
@@ -64,12 +68,12 @@ public class EmployeeControllerHttpResponseTest {
         assertEquals("completed", parsedResponse.get("status"));
         assertTrue(parsedResponse.containsKey("executionTime"));
         
-        System.out.println("MERGE UPSERT HTTP Response Test - SUCCESS ✓");
+        log.info("MERGE UPSERT HTTP Response Test - SUCCESS ✓");
     }
 
     @Test
     void testTempTableUpsertApiHttpResponse() throws JsonProcessingException {
-        System.out.println("\n=== Testing TEMP TABLE UPSERT API HTTP Response ===");
+        log.info("=== Testing TEMP TABLE UPSERT API HTTP Response ===");
         
         // サービスのモック設定
         Map<String, Integer> mockResult = Map.of("updateCount", 4800, "insertCount", 1200);
@@ -82,8 +86,8 @@ public class EmployeeControllerHttpResponseTest {
         // JSONレスポンスの生成と検証
         String jsonResponse = objectMapper.writeValueAsString(response);
         
-        System.out.println("HTTP Response (JSON):");
-        System.out.println(jsonResponse);
+        log.info("HTTP Response (JSON):");
+        log.info(jsonResponse);
         
         // JSONが正しく生成されることを確認
         assertNotNull(jsonResponse, "JSON response should not be null");
@@ -107,12 +111,12 @@ public class EmployeeControllerHttpResponseTest {
         assertEquals(1200, parsedResponse.get("insertCount"));
         assertTrue(parsedResponse.containsKey("executionTime"));
         
-        System.out.println("TEMP TABLE UPSERT HTTP Response Test - SUCCESS ✓");
+        log.info("TEMP TABLE UPSERT HTTP Response Test - SUCCESS ✓");
     }
 
     @Test
     void testBothApisJsonResponseStructure() throws JsonProcessingException {
-        System.out.println("\n=== Testing Both APIs JSON Response Structure ===");
+        log.info("=== Testing Both APIs JSON Response Structure ===");
         
         // 1. MERGE UPSERT APIのJSON構造確認
         Map<String, Object> mergeResponse = employeeController.testMergeUpsert(6000);
@@ -125,11 +129,9 @@ public class EmployeeControllerHttpResponseTest {
         Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert(6000);
         String tempTableJson = objectMapper.writeValueAsString(tempTableResponse);
         
-        System.out.println("API Response Structure Comparison:");
-        System.out.println("1. MERGE UPSERT JSON:");
-        System.out.println("   " + mergeJson);
-        System.out.println("2. TEMP TABLE UPSERT JSON:");
-        System.out.println("   " + tempTableJson);
+        log.info("API Response Structure Comparison:");
+        log.info("1. MERGE UPSERT JSON: {}", mergeJson);
+        log.info("2. TEMP TABLE UPSERT JSON: {}", tempTableJson);
         
         // 両方のJSONが有効であることを確認
         assertNotNull(mergeJson);
@@ -141,12 +143,12 @@ public class EmployeeControllerHttpResponseTest {
         assertTrue(mergeJson.split(",").length == 3, "MERGE JSON should have 3 fields");
         assertTrue(tempTableJson.split(",").length >= 5, "Temp Table JSON should have 5 fields");
         
-        System.out.println("JSON Response Structure Test - SUCCESS ✓");
+        log.info("JSON Response Structure Test - SUCCESS ✓");
     }
 
     @Test
     void testHttpStatusCodeEquivalent() {
-        System.out.println("\n=== Testing HTTP Status Code Equivalent ===");
+        log.info("=== Testing HTTP Status Code Equivalent ===");
         
         // APIが例外をスローせず、正常にレスポンスを返すことを確認
         try {
@@ -154,7 +156,7 @@ public class EmployeeControllerHttpResponseTest {
             Map<String, Object> mergeResponse = employeeController.testMergeUpsert(6000);
             assertNotNull(mergeResponse);
             assertEquals("completed", mergeResponse.get("status"));
-            System.out.println("✓ MERGE UPSERT API returns valid response (equivalent to HTTP 200)");
+            log.info("✓ MERGE UPSERT API returns valid response (equivalent to HTTP 200)");
             
             // Temp Table UPSERT API
             Map<String, Integer> mockResult = Map.of("updateCount", 1000, "insertCount", 2000);
@@ -163,14 +165,14 @@ public class EmployeeControllerHttpResponseTest {
             Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert(6000);
             assertNotNull(tempTableResponse);
             assertEquals("completed", tempTableResponse.get("status"));
-            System.out.println("✓ TEMP TABLE UPSERT API returns valid response (equivalent to HTTP 200)");
+            log.info("✓ TEMP TABLE UPSERT API returns valid response (equivalent to HTTP 200)");
             
         } catch (Exception e) {
-            System.err.println("API threw exception: " + e.getMessage());
+            log.error("API threw exception: {}", e.getMessage(), e);
             throw e; // テスト失敗
         }
         
-        System.out.println("HTTP Status Code Equivalent Test - SUCCESS ✓");
-        System.out.println("Both APIs would return HTTP 200 OK in real scenario");
+        log.info("HTTP Status Code Equivalent Test - SUCCESS ✓");
+        log.info("Both APIs would return HTTP 200 OK in real scenario");
     }
 }

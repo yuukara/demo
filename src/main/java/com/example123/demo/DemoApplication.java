@@ -3,6 +3,8 @@ package com.example123.demo;
 import java.io.IOException;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,6 +28,8 @@ import com.example123.demo.service.SafeDataProcessingService;
  */
 @SpringBootApplication
 public class DemoApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(DemoApplication.class);
 
     /**
      * アプリケーションのエントリーポイント
@@ -66,74 +70,72 @@ public class DemoApplication {
      * @param populationDataService 人口データ管理サービス
      * @param employeeMapper 従業員情報マッパー
      */
-    @SuppressWarnings({"unused", "CallToPrintStackTrace"})
+    @SuppressWarnings({"unused"})
     private void runEmployeeAndPopulationTasks(EmployeeService employeeService,
                                              PopulationDataService populationDataService,
                                              EmployeeMapper employeeMapper) {
-        System.out.println("Starting employee data generation and CSV creation process...");
+        log.info("Starting employee data generation and CSV creation process...");
 
         // テーブルのデータを削除
-        System.out.println("Truncating employees table...");
+        log.info("Truncating employees table...");
         long startDelete = System.currentTimeMillis();
         employeeMapper.truncateTable();
         long deleteTime = System.currentTimeMillis() - startDelete;
-        System.out.printf("Deletion completed in %.2f seconds%n", deleteTime / 1000.0);
+        log.info("Deletion completed in {} seconds", String.format("%.2f", deleteTime / 1000.0));
 
         // データ生成
         long startGeneration = System.currentTimeMillis();
-        System.out.println("Generating dummy employee data...");
+        log.info("Generating dummy employee data...");
         List<Employee> employees = employeeService.createDummyEmployees(1000000);
         long generationTime = System.currentTimeMillis() - startGeneration;
-        System.out.printf("Data generation completed in %.2f seconds%n", generationTime / 1000.0);
+        log.info("Data generation completed in {} seconds", String.format("%.2f", generationTime / 1000.0));
 
         // マルチスレッドでのCSV生成
-        System.out.println("\n=== Multi-threaded CSV Generation ===");
+        log.info("\n=== Multi-threaded CSV Generation ===");
         long startMultiThread = System.currentTimeMillis();
         employeeService.writeToCsv(employees, "employees_multi.csv");
         long multiThreadTime = System.currentTimeMillis() - startMultiThread;
-        System.out.printf("Multi-threaded processing completed in %.2f seconds%n", multiThreadTime / 1000.0);
+        log.info("Multi-threaded processing completed in {} seconds", String.format("%.2f", multiThreadTime / 1000.0));
 
         // シングルスレッドでのCSV生成
-        System.out.println("\n=== Single-threaded CSV Generation ===");
+        log.info("\n=== Single-threaded CSV Generation ===");
         long startSingleThread = System.currentTimeMillis();
         employeeService.writeToCsvSingleThread(employees, "employees_single.csv");
         long singleThreadTime = System.currentTimeMillis() - startSingleThread;
-        System.out.printf("Single-threaded processing completed in %.2f seconds%n", singleThreadTime / 1000.0);
+        log.info("Single-threaded processing completed in {} seconds", String.format("%.2f", singleThreadTime / 1000.0));
 
         // 性能比較の表示
-        System.out.println("\n=== Performance Comparison ===");
-        System.out.printf("Single-thread time: %.2f seconds%n", singleThreadTime / 1000.0);
-        System.out.printf("Multi-thread time: %.2f seconds%n", multiThreadTime / 1000.0);
+        log.info("\n=== Performance Comparison ===");
+        log.info("Single-thread time: {} seconds", String.format("%.2f", singleThreadTime / 1000.0));
+        log.info("Multi-thread time: {} seconds", String.format("%.2f", multiThreadTime / 1000.0));
         double speedup = (double) singleThreadTime / multiThreadTime;
-        System.out.printf("Speed-up ratio: %.2fx%n", speedup);
+        log.info("Speed-up ratio: {}x", String.format("%.2f", speedup));
 
         // データベースへの保存
-        System.out.println("\n=== Database Save Test ===");
+        log.info("\n=== Database Save Test ===");
         employeeService.saveEmployees(employees);
 
         // 人口データの読み込みテスト
-        System.out.println("\n=== Population Data Loading Test ===");
+        log.info("\n=== Population Data Loading Test ===");
         try {
             long startPopulation = System.currentTimeMillis();
             List<PopulationData> populationData = populationDataService.loadPopulationData();
             long populationTime = System.currentTimeMillis() - startPopulation;
 
-            System.out.printf("Successfully loaded %d population records in %.2f seconds%n",
-                populationData.size(), populationTime / 1000.0);
+            log.info("Successfully loaded {} population records in {} seconds",
+                populationData.size(), String.format("%.2f", populationTime / 1000.0));
 
             // サンプルデータの表示
             if (!populationData.isEmpty()) {
-                System.out.println("\nSample record:");
+                log.info("\nSample record:");
                 PopulationData sample = populationData.get(0);
-                System.out.printf("Prefecture: %s, Year: %s, Total Population: %s%n",
+                log.info("Prefecture: {}, Year: {}, Total Population: {}",
                     sample.getPrefecture(),
                     sample.getYear(),
                     sample.getTotalPopulationEstimate());
             }
         } catch (IOException | RuntimeException e) {
-            System.err.println("Error loading population data: " + e.getMessage());
-            // 意図的なデバッグ出力
-            e.printStackTrace();
+            log.error("Error loading population data: {}", e.getMessage(), e);
         }
     }
 
@@ -145,22 +147,22 @@ public class DemoApplication {
      */
     @SuppressWarnings("unused")
     private void runDataProcessingTasks(SafeDataProcessingService safeService) {
-        System.out.println("\n\n=== Safe Data Processing Service Test ===");
+        log.info("\n\n=== Safe Data Processing Service Test ===");
         final int DATA_SIZE = 10_000_000;
 
         // --- Safe (Chunked) Service ---
-        System.out.println("\n--- Running SafeDataProcessingService ---");
+        log.info("\n--- Running SafeDataProcessingService ---");
         long startSafe = System.currentTimeMillis();
         List<Integer> safeResult = safeService.processData(DATA_SIZE);
         long safeTime = System.currentTimeMillis() - startSafe;
-        System.out.printf("Safe service processed %d records in %.2f seconds%n",
-            safeResult.size(), safeTime / 1000.0);
+        log.info("Safe service processed {} records in {} seconds",
+            safeResult.size(), String.format("%.2f", safeTime / 1000.0));
 
         // データ整合性チェック
         boolean dataIntegrityOk = safeResult.size() == DATA_SIZE;
-        System.out.printf("Data integrity check: %s (Expected: %d, Actual: %d)%n",
+        log.info("Data integrity check: {} (Expected: {}, Actual: {})",
             dataIntegrityOk ? "PASS" : "FAIL", DATA_SIZE, safeResult.size());
 
-        System.out.println("Safe data processing test completed successfully.");
+        log.info("Safe data processing test completed successfully.");
     }
 }

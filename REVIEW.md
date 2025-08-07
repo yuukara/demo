@@ -157,3 +157,40 @@
 **Last Updated**: 2025-08-06  
 **Overall Status**: 🟢 **EXCELLENT** - Production Ready  
 **Next Review**: 定期メンテナンス時
+## コードレビュー結果
+
+### 1. 不適切なロギング
+
+**問題点:**
+プロジェクト全体で `System.out.println` や `e.printStackTrace()` が散見されます。
+これらの方法は、構造化されたロギングやログレベルの制御が難しく、本番環境での運用やデバッグにおいて以下の問題を引き起こす可能性があります。
+
+-   **パフォーマンスへの影響:** 標準出力は同期的であり、大量のログを出力するとアプリケーションのパフォーマンスを低下させる可能性があります。
+-   **ログ管理の非効率性:** ログの検索、フィルタリング、永続化が困難になります。
+-   **セキュリティリスク:** スタックトレースに機密情報が含まれる場合、意図せず漏洩するリスクがあります。
+
+**該当箇所:**
+-   `src/main/java/com/example123/demo/DemoApplication.java`
+-   `src/main/java/com/example123/demo/service/OptimizedEmployeeService.java`
+
+**改善提案:**
+プロジェクト全体でSLF4Jなどのロギングフレームワークの使用を徹底します。
+`System.out.println` は `log.info()` や `log.debug()` に、`e.printStackTrace()` は `log.error("エラーメッセージ", e)` のように、適切なログレベルとコンテキストを付与した形式に置き換えることを強く推奨します。
+### 該当箇所一覧
+
+#### 本番コード
+-   `src/main/java/com/example123/demo/DemoApplication.java`
+-   `src/main/java/com/example123/demo/service/OptimizedEmployeeService.java`
+-   `src/main/java/com/example123/demo/service/CsvExportService.java`
+-   `src/main/java/com/example123/demo/service/EmployeeDataService.java`
+-   `src/main/java/com/example123/demo/service/SafeDataProcessingService.java`
+-   `src/main/java/com/example123/demo/controller/EmployeeAssignmentHistoryController.java`
+-   `src/main/java/com/example123/demo/service/EmployeeAssignmentHistoryService.java`
+
+#### テストコード
+-   `src/test/java/com/example123/demo/validation/EmployeeValidationTest.java`
+-   `src/test/java/com/example123/demo/DemoApplicationTests.java`
+-   `src/test/java/com/example123/demo/controller/EmployeeControllerDirectTest.java`
+-   `src/test/java/com/example123/demo/controller/EmployeeControllerHttpResponseTest.java`
+-   `src/test/java/com/example123/demo/controller/EmployeeControllerApiTest.java`
+-   `src/test/java/com/example123/demo/controller/EmployeeControllerWebMvcTest.java`

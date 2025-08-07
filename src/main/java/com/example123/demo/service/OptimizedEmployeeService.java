@@ -18,12 +18,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.example123.demo.domain.Employee;
 
 @Service
 public class OptimizedEmployeeService {
+    private static final Logger log = LoggerFactory.getLogger(OptimizedEmployeeService.class);
     private static final int BATCH_SIZE = 1000;
 
     public List<Employee> createDummyEmployees(int count) {
@@ -40,7 +43,6 @@ public class OptimizedEmployeeService {
         return employees;
     }
 
-    @SuppressWarnings("CallToPrintStackTrace")
     public void writeToCsv(List<Employee> employees, String filePath) throws IOException {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -62,18 +64,26 @@ public class OptimizedEmployeeService {
             mergeSortedFiles(tempFiles, filePath);
 
         } catch (InterruptedException | java.util.concurrent.ExecutionException e) {
-            // 意図的なデバッグ出力のため警告を抑制
-            e.printStackTrace();
+            log.error("Error during parallel CSV writing", e);
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
         } finally {
             executor.shutdown();
             try {
-                executor.awaitTermination(1, TimeUnit.MINUTES);
+                if (!executor.awaitTermination(1, TimeUnit.MINUTES)) {
+                    log.warn("Executor did not terminate in the specified time.");
+                    executor.shutdownNow();
+                }
             } catch (InterruptedException e) {
+                log.error("Executor termination interrupted", e);
                 Thread.currentThread().interrupt();
             }
             // ステップ4: クリーンアップ
             for (File tempFile : tempFiles) {
-                tempFile.delete();
+                if (!tempFile.delete()) {
+                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+                }
             }
         }
     }
@@ -117,15 +127,13 @@ public class OptimizedEmployeeService {
     /**
      * 複数のソート済み一時ファイルをマージする (Java 6互換)
      */
-    @SuppressWarnings("CallToPrintStackTrace")
     private void mergeSortedFiles(List<File> files, String outputPath) throws IOException {
-        PriorityQueue<FileRecord> pq = new PriorityQueue<>(files.size(), 
+        PriorityQueue<FileRecord> pq = new PriorityQueue<>(files.size(),
             (r1, r2) -> Integer.valueOf(r1.getEmployeeId()).compareTo(Integer.valueOf(r2.getEmployeeId())));
 
         List<BufferedReader> readers = new ArrayList<>();
-        BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));
-
-        try {
+        
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             // ヘッダーを書き込み
             writer.write("ID,Name,Department,Email\n");
 
@@ -156,13 +164,8 @@ public class OptimizedEmployeeService {
                 try {
                     reader.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("Failed to close reader for a temporary file.", e);
                 }
-            }
-            try {
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
     }
