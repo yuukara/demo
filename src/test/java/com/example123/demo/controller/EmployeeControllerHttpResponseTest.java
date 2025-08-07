@@ -40,7 +40,7 @@ public class EmployeeControllerHttpResponseTest {
         System.out.println("\n=== Testing MERGE UPSERT API HTTP Response ===");
         
         // API実行
-        Map<String, Object> response = employeeController.testMergeUpsert();
+        Map<String, Object> response = employeeController.testMergeUpsert(6000);
         
         // JSONレスポンスの生成と検証
         String jsonResponse = objectMapper.writeValueAsString(response);
@@ -73,11 +73,11 @@ public class EmployeeControllerHttpResponseTest {
         
         // サービスのモック設定
         Map<String, Integer> mockResult = Map.of("updateCount", 4800, "insertCount", 1200);
-        org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable())
+        org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable(6000))
             .thenReturn(mockResult);
         
         // API実行
-        Map<String, Object> response = employeeController.testTempTableUpsert();
+        Map<String, Object> response = employeeController.testTempTableUpsert(6000);
         
         // JSONレスポンスの生成と検証
         String jsonResponse = objectMapper.writeValueAsString(response);
@@ -115,14 +115,14 @@ public class EmployeeControllerHttpResponseTest {
         System.out.println("\n=== Testing Both APIs JSON Response Structure ===");
         
         // 1. MERGE UPSERT APIのJSON構造確認
-        Map<String, Object> mergeResponse = employeeController.testMergeUpsert();
+        Map<String, Object> mergeResponse = employeeController.testMergeUpsert(6000);
         String mergeJson = objectMapper.writeValueAsString(mergeResponse);
         
         // 2. Temp Table UPSERT APIのJSON構造確認
         Map<String, Integer> mockResult = Map.of("updateCount", 3000, "insertCount", 3000);
-        org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable())
+        org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable(6000))
             .thenReturn(mockResult);
-        Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert();
+        Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert(6000);
         String tempTableJson = objectMapper.writeValueAsString(tempTableResponse);
         
         System.out.println("API Response Structure Comparison:");
@@ -151,16 +151,16 @@ public class EmployeeControllerHttpResponseTest {
         // APIが例外をスローせず、正常にレスポンスを返すことを確認
         try {
             // MERGE UPSERT API
-            Map<String, Object> mergeResponse = employeeController.testMergeUpsert();
+            Map<String, Object> mergeResponse = employeeController.testMergeUpsert(6000);
             assertNotNull(mergeResponse);
             assertEquals("completed", mergeResponse.get("status"));
             System.out.println("✓ MERGE UPSERT API returns valid response (equivalent to HTTP 200)");
             
             // Temp Table UPSERT API
             Map<String, Integer> mockResult = Map.of("updateCount", 1000, "insertCount", 2000);
-            org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable())
+            org.mockito.Mockito.when(employeeService.generateAndUpsertRandomEmployeesViaTempTable(6000))
                 .thenReturn(mockResult);
-            Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert();
+            Map<String, Object> tempTableResponse = employeeController.testTempTableUpsert(6000);
             assertNotNull(tempTableResponse);
             assertEquals("completed", tempTableResponse.get("status"));
             System.out.println("✓ TEMP TABLE UPSERT API returns valid response (equivalent to HTTP 200)");

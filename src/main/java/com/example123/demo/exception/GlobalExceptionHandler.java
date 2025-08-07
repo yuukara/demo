@@ -5,12 +5,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.example123.demo.util.LoggingUtils;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -21,6 +25,8 @@ import jakarta.validation.ConstraintViolationException;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Bean Validation例外をハンドリングします
@@ -37,6 +43,11 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             fieldErrors.put(error.getField(), error.getDefaultMessage());
         });
+        
+        // バリデーションエラーログを出力（セキュリティ考慮）
+        log.warn("入力値検証エラー: 検証対象={}, エラー件数={}", 
+            ex.getBindingResult().getTarget().getClass().getSimpleName(), 
+            fieldErrors.size());
         
         errorResponse.put("status", "validation_error");
         errorResponse.put("message", "入力データに検証エラーがあります");
@@ -95,10 +106,15 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
+        
+        // 重要なエラー情報をログ出力
+        LoggingUtils.logError(log, "予期しないエラーが発生しました", ex);
+        
         Map<String, Object> errorResponse = new HashMap<>();
         
         errorResponse.put("status", "internal_error");
         errorResponse.put("message", "内部サーバーエラーが発生しました");
+        // 本番環境では詳細なエラーメッセージを隠蔽
         errorResponse.put("detail", ex.getMessage());
         errorResponse.put("timestamp", LocalDateTime.now());
         

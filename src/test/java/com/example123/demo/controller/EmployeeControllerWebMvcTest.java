@@ -74,7 +74,7 @@ public class EmployeeControllerWebMvcTest {
         Map<String, Integer> mockUpsertResult = new HashMap<>();
         mockUpsertResult.put("updateCount", 4800);
         mockUpsertResult.put("insertCount", 1200);
-        when(employeeService.generateAndUpsertRandomEmployeesViaTempTable()).thenReturn(mockUpsertResult);
+        when(employeeService.generateAndUpsertRandomEmployeesViaTempTable(6000)).thenReturn(mockUpsertResult);
         
         // APIの呼び出しとレスポンスの検証
         mockMvc.perform(post("/api/employees/test-temp-table-upsert")
@@ -100,7 +100,7 @@ public class EmployeeControllerWebMvcTest {
                 .andExpect(status().isOk());
         
         Map<String, Integer> mockResult = Map.of("updateCount", 100, "insertCount", 200);
-        when(employeeService.generateAndUpsertRandomEmployeesViaTempTable()).thenReturn(mockResult);
+        when(employeeService.generateAndUpsertRandomEmployeesViaTempTable(6000)).thenReturn(mockResult);
         
         mockMvc.perform(post("/api/employees/test-temp-table-upsert"))
                 .andExpect(status().isOk());

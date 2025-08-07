@@ -56,3 +56,9 @@ build/
 
 # AI用の指示ファイル
 AI_INSTRUCTIONS.md
+
+# AI開発支援ツール
+.serena/
+
+# 一時ファイル・不正ファイル
+nul

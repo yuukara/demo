@@ -236,19 +236,35 @@ mvn spring-boot:run
 
 #### 1. MERGE文によるUPSERT処理のテスト
 ```
-POST /api/employees/test-merge-upsert
+POST /api/employees/test-merge-upsert?count=3000
 ```
+- **パラメータ**: `count` (オプション, デフォルト: 6000) - 処理するデータ件数
 - 従業員テーブルをクリア後、MERGE文を使用したUPSERT処理をテスト
-- 3,000件のランダム従業員データを生成・処理
-- レスポンス: 実行時間、処理方式、ステータス
+- 指定件数のランダム従業員データを生成・処理
+- レスポンス: 実行時間、データ件数、処理方式、ステータス
 
 #### 2. 一時テーブルによるUPSERT処理のテスト
 ```
-POST /api/employees/test-temp-table-upsert
+POST /api/employees/test-temp-table-upsert?count=3000
 ```
+- **パラメータ**: `count` (オプション, デフォルト: 6000) - 処理するデータ件数
 - 従業員テーブルをクリア後、一時テーブルを使用したUPSERT処理をテスト
-- 3,000件のランダム従業員データを生成・処理
-- レスポンス: 実行時間、更新件数、挿入件数、処理方式、ステータス
+- 指定件数のランダム従業員データを生成・処理
+- レスポンス: 実行時間、データ件数、更新件数、挿入件数、処理方式、ステータス
+
+#### 3. 単一従業員登録API（新機能）
+```
+POST /api/v1/employees/create
+Content-Type: application/json
+```
+- **機能**: 入力値検証付きの単一従業員登録
+- **入力**: EmployeeDTO（JSON形式）
+- **バリデーション機能**: 
+  - 必須項目チェック（ID、名前、部署、雇用形態、入社日、メール、生年月日）
+  - 形式チェック（電話番号、メール形式、性別、雇用形態）
+  - 文字数制限（各項目に適切な上限設定）
+  - 日本語エラーメッセージ対応
+- **レスポンス**: 登録結果、従業員ID、タイムスタンプ
 
 ### 配属履歴データAPI
 
@@ -265,39 +281,98 @@ POST /assignment-histories/upsert?count=10000
 
 #### Bash/Linux/macOS環境
 ```bash
-# 従業員データのMERGE UPSERT処理をテスト
-curl -X POST http://localhost:8080/api/employees/test-merge-upsert
+# 従業員データのMERGE UPSERT処理（5000件指定）
+curl -X POST "http://localhost:8080/api/employees/test-merge-upsert?count=5000"
 
-# 従業員データの一時テーブルUPSERT処理をテスト
-curl -X POST http://localhost:8080/api/employees/test-temp-table-upsert
+# 従業員データの一時テーブルUPSERT処理（3000件指定）
+curl -X POST "http://localhost:8080/api/employees/test-temp-table-upsert?count=3000"
 
 # 配属履歴データを5000件でUPSERT処理
 curl -X POST "http://localhost:8080/assignment-histories/upsert?count=5000"
+
+# 単一従業員登録（新機能）
+curl -X POST http://localhost:8080/api/v1/employees/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "E100001",
+    "name": "山田太郎",
+    "department": "開発部",
+    "position": "エンジニア",
+    "employment_status": "正社員",
+    "hire_date": "2025-04-01",
+    "phone_number": "03-1234-5678",
+    "email": "yamada@example.com",
+    "birth_date": "1990-01-01",
+    "gender": "男性"
+  }'
 ```
 
 #### PowerShell環境
 ```powershell
-# 従業員データのMERGE UPSERT処理をテスト
-Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-merge-upsert" -Method Post
+# 従業員データのMERGE UPSERT処理（5000件指定）
+Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-merge-upsert?count=5000" -Method Post
 
-# 従業員データの一時テーブルUPSERT処理をテスト
-Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-temp-table-upsert" -Method Post
+# 従業員データの一時テーブルUPSERT処理（3000件指定）
+Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-temp-table-upsert?count=3000" -Method Post
+
+# デフォルト件数（6000件）で実行
+Invoke-RestMethod -Uri "http://localhost:8080/api/employees/test-merge-upsert" -Method Post
 
 # 配属履歴データを5000件でUPSERT処理
 Invoke-RestMethod -Uri "http://localhost:8080/assignment-histories/upsert?count=5000" -Method Post
+
+# 単一従業員登録（新機能）
+$employeeData = @{
+    id = "E100001"
+    name = "山田太郎"
+    department = "開発部"
+    position = "エンジニア"
+    employment_status = "正社員"
+    hire_date = "2025-04-01"
+    phone_number = "03-1234-5678"
+    email = "yamada@example.com"
+    birth_date = "1990-01-01"
+    gender = "男性"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/v1/employees/create" -Method Post -ContentType "application/json" -Body $employeeData
 ```
 
 #### Windows Command Prompt環境
 ```cmd
-REM 従業員データのMERGE UPSERT処理をテスト
-curl -X POST http://localhost:8080/api/employees/test-merge-upsert
+REM 従業員データのMERGE UPSERT処理（5000件指定）
+curl -X POST "http://localhost:8080/api/employees/test-merge-upsert?count=5000"
 
-REM 従業員データの一時テーブルUPSERT処理をテスト
-curl -X POST http://localhost:8080/api/employees/test-temp-table-upsert
+REM 従業員データの一時テーブルUPSERT処理（3000件指定）
+curl -X POST "http://localhost:8080/api/employees/test-temp-table-upsert?count=3000"
 
 REM 配属履歴データを5000件でUPSERT処理
 curl -X POST "http://localhost:8080/assignment-histories/upsert?count=5000"
+
+REM 単一従業員登録（新機能）
+curl -X POST http://localhost:8080/api/v1/employees/create ^
+  -H "Content-Type: application/json" ^
+  -d "{\"id\":\"E100001\",\"name\":\"山田太郎\",\"department\":\"開発部\",\"position\":\"エンジニア\",\"employment_status\":\"正社員\",\"hire_date\":\"2025-04-01\",\"phone_number\":\"03-1234-5678\",\"email\":\"yamada@example.com\",\"birth_date\":\"1990-01-01\",\"gender\":\"男性\"}"
 ```
+
+## セキュリティ機能
+
+### 入力値検証
+- **Bean Validation**: `@Valid`アノテーションによる自動バリデーション
+- **詳細検証ルール**: 
+  - 必須項目チェック（`@NotBlank`, `@NotNull`）
+  - 文字数制限（`@Size`）
+  - 形式チェック（`@Pattern`, `@Email`）
+  - カスタムバリデーションメッセージ（日本語対応）
+
+### セキュアな開発実践
+- **環境変数管理**: データベース認証情報の適切な管理
+- **コンストラクタインジェクション**: 依存関係注入の最適化
+- **SQLインジェクション対策**: MyBatisパラメーター化クエリ使用
+
+### データ保護
+- **楽観的ロック**: バージョン番号による同時更新制御
+- **監査証跡**: 作成者/更新者、作成日時/更新日時の自動記録
 
 ## 今後の展望
 - WebUIの追加
