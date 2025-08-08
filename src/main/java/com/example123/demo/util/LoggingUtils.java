@@ -40,9 +40,12 @@ public class LoggingUtils {
      * @param executionTime 実行時間（ミリ秒）
      */
     public static void logApiEnd(Logger logger, String operationId, long executionTime) {
-        MDC.put("executionTime", String.valueOf(executionTime));
-        logger.info("API処理終了: operationId: {}, 実行時間: {}ms", operationId, executionTime);
-        clearMDC();
+        try {
+            MDC.put("executionTime", String.valueOf(executionTime));
+            logger.info("API処理終了: operationId: {}, 実行時間: {}ms", operationId, executionTime);
+        } finally {
+            clearMDC();
+        }
     }
     
     /**
@@ -53,15 +56,17 @@ public class LoggingUtils {
      * @param recordCount 処理件数
      */
     public static void logPerformance(String operation, long executionTime, int recordCount) {
-        MDC.put("operation", operation);
-        MDC.put("executionTime", String.valueOf(executionTime));
-        MDC.put("recordCount", String.valueOf(recordCount));
-        
-        performanceLogger.info("パフォーマンス測定: operation={}, executionTime={}ms, recordCount={}, throughput={}/sec", 
-            operation, executionTime, recordCount, 
-            executionTime > 0 ? (recordCount * 1000.0 / executionTime) : 0);
-        
-        clearMDC();
+        try {
+            MDC.put("operation", operation);
+            MDC.put("executionTime", String.valueOf(executionTime));
+            MDC.put("recordCount", String.valueOf(recordCount));
+            
+            performanceLogger.info("パフォーマンス測定: operation={}, executionTime={}ms, recordCount={}, throughput={}/sec", 
+                operation, executionTime, recordCount, 
+                executionTime > 0 ? (recordCount * 1000.0 / executionTime) : 0);
+        } finally {
+            clearMDC();
+        }
     }
     
     /**
@@ -87,8 +92,11 @@ public class LoggingUtils {
      * @param affectedRows 影響を受けた行数
      */
     public static void logDatabaseEnd(Logger logger, long executionTime, int affectedRows) {
-        logger.info("DB処理終了: 実行時間={}ms, 影響行数={}", executionTime, affectedRows);
-        clearMDC();
+        try {
+            logger.info("DB処理終了: 実行時間={}ms, 影響行数={}", executionTime, affectedRows);
+        } finally {
+            clearMDC();
+        }
     }
     
     /**

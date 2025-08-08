@@ -17,15 +17,18 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.example123.demo.DemoApplication;
 import com.example123.demo.service.EmployeeService;
 
 /**
  * EmployeeController WebMVC テストクラス
  * MockMvcを使用してHTTPエンドポイントの動作を確認します
  */
-@WebMvcTest(controllers = EmployeeController.class)
+@WebMvcTest(controllers = EmployeeController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = DemoApplication.class))
 @ActiveProfiles("test")
 public class EmployeeControllerWebMvcTest {
 

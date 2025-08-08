@@ -14,6 +14,8 @@ import org.springframework.validation.annotation.Validated;
 
 import com.example123.demo.domain.Employee;
 import com.example123.demo.repository.EmployeeMapper;
+import com.example123.demo.aop.Loggable;
+import com.example123.demo.aop.PerformanceMonitoring;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -48,6 +50,8 @@ public class EmployeeDataService {
      *
      * @param employees 保存する従業員情報のリスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "従業員データ保存処理")
+    @PerformanceMonitoring(threshold = 3000, operation = "EMPLOYEE_SAVE")
     public void saveEmployees(@NotEmpty(message = "保存する従業員リストが空です") @Valid List<Employee> employees) {
         saveEmployeesInParallel(employees);
     }
@@ -62,9 +66,6 @@ public class EmployeeDataService {
     public void saveEmployeesInParallel(@NotEmpty(message = "保存する従業員リストが空です") @Valid List<Employee> employees) {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        long startTime = System.currentTimeMillis();
-        log.info("Saving {} employees to the database in parallel with {} threads...",
-            employees.size(), numThreads);
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
@@ -99,9 +100,6 @@ public class EmployeeDataService {
                 Thread.currentThread().interrupt();
             }
         }
-        
-        long totalTime = System.currentTimeMillis() - startTime;
-        log.info("Parallel database save completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
     }
 
     /**
@@ -110,24 +108,11 @@ public class EmployeeDataService {
      *
      * @param employees UPSERT対象の従業員情報のリスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "従業員MERGE-UPSERT処理")
+    @PerformanceMonitoring(threshold = 5000, operation = "MERGE_UPSERT_BATCH")
     public void upsertEmployeesInBatches(List<Employee> employees) {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        long startTime = System.currentTimeMillis();
-        
-        // ID範囲ごとの件数をカウント
-        long newRecords = employees.stream()
-            .filter(e -> Integer.parseInt(e.getId().substring(1)) >= 10000)
-            .count();
-        long existingRecords = employees.size() - newRecords;
-        
-        log.info("\nUpsert operation details:");
-        log.info("Total records: {}", employees.size());
-        log.info("Expected new records (ID >= E010000): {} ({}%)",
-            newRecords, String.format("%.1f", newRecords * 100.0 / employees.size()));
-        log.info("Expected updates (ID < E010000): {} ({}%)",
-            existingRecords, String.format("%.1f", existingRecords * 100.0 / employees.size()));
-        log.info("Starting MERGE operation...\n");
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
@@ -162,9 +147,6 @@ public class EmployeeDataService {
                 Thread.currentThread().interrupt();
             }
         }
-        
-        long totalTime = System.currentTimeMillis() - startTime;
-        log.info("Upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
     }
 
     /**
@@ -174,24 +156,11 @@ public class EmployeeDataService {
      * @param employees UPSERT対象の従業員情報のリスト
      * @return 全体の処理件数を含むMap（updateCount: 更新件数合計, insertCount: 挿入件数合計）
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "従業員一時テーブルUPSERT処理")
+    @PerformanceMonitoring(threshold = 5000, operation = "TEMP_TABLE_UPSERT_BATCH")
     public java.util.Map<String, Integer> upsertEmployeesViaTempTableInBatches(List<Employee> employees) {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        long startTime = System.currentTimeMillis();
-        
-        // ID範囲ごとの件数をカウント
-        long newRecords = employees.stream()
-            .filter(e -> Integer.parseInt(e.getId().substring(1)) >= 10000)
-            .count();
-        long existingRecords = employees.size() - newRecords;
-        
-        log.info("\nUpsert operation details (Temp Table method):");
-        log.info("Total records: {}", employees.size());
-        log.info("Expected new records (ID >= E010000): {} ({}%)",
-            newRecords, String.format("%.1f", newRecords * 100.0 / employees.size()));
-        log.info("Expected updates (ID < E010000): {} ({}%)",
-            existingRecords, String.format("%.1f", existingRecords * 100.0 / employees.size()));
-        log.info("Starting Temp Table operation...\n");
 
         int totalUpdateCount = 0;
         int totalInsertCount = 0;
@@ -234,10 +203,6 @@ public class EmployeeDataService {
             }
         }
         
-        long totalTime = System.currentTimeMillis() - startTime;
-        log.info("Temp Table Upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
-        log.info("Total updates: {}, Total inserts: {}", totalUpdateCount, totalInsertCount);
-        
         java.util.Map<String, Integer> result = new java.util.HashMap<>();
         result.put("updateCount", totalUpdateCount);
         result.put("insertCount", totalInsertCount);
@@ -247,22 +212,22 @@ public class EmployeeDataService {
     /**
      * 従業員テーブルのデータを全て削除します。
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "従業員テーブル全削除")
+    @PerformanceMonitoring(threshold = 2000, operation = "TRUNCATE_EMPLOYEES")
     public void truncateEmployeesTable() {
-        log.info("Truncating employees table...");
         employeeMapper.truncateTable();
-        log.info("Employees table truncated.");
     }
 
     /**
      * UPSERT処理用の基礎データを準備します。
      * 更新対象となるデータ（E000000-E009999）を事前にテーブルに投入します。
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "UPSERT基礎データ準備")
+    @PerformanceMonitoring(threshold = 3000, operation = "PREPARE_BASE_DATA")
     public void prepareBaseDataForUpsert() {
-        log.info("Preparing base data for upsert test...");
         List<Employee> baseEmployees = dataGenerationService.createBaseDataForUpsert();
         
         // バッチでベースデータを投入
         saveEmployeesInParallel(baseEmployees);
-        log.info("Base data preparation completed: {} records inserted.", baseEmployees.size());
     }
 }

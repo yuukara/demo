@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import com.example123.demo.aop.Loggable;
+import com.example123.demo.aop.PerformanceMonitoring;
 
 import com.example123.demo.domain.Employee;
 
@@ -41,12 +43,9 @@ public class CsvExportService {
      * @param employees 出力する従業員情報のリスト
      * @param filePath 出力先のCSVファイルパス
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "CSV出力処理（シングルスレッド）")
+    @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_SINGLE_THREAD")
     public void writeToCsvSingleThread(List<Employee> employees, String filePath) {
-        log.info("Using single thread for CSV generation");
-        log.info("Processing {} employees", employees.size());
-        
-        long startTime = System.currentTimeMillis();
-        
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
                         "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
@@ -70,11 +69,9 @@ public class CsvExportService {
                     employee.getVersion()));
             }
             
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.info("Single thread processing completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
-            
         } catch (IOException e) {
             log.error("Error writing to CSV file in single-thread mode", e);
+            throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
         }
     }
 
@@ -87,13 +84,11 @@ public class CsvExportService {
      * @param employees 出力する従業員情報のリスト
      * @param filePath 出力先のCSVファイルパス
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "CSV出力処理（マルチスレッド）")
+    @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_MULTI_THREAD")
     public void writeToCsv(List<Employee> employees, String filePath) {
         int numThreads = Runtime.getRuntime().availableProcessors();
-        log.info("Using {} threads for CSV generation (based on available processors)", numThreads);
-        log.info("Processing {} employees in batches of {}", employees.size(), BATCH_SIZE);
-        
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        long startTime = System.currentTimeMillis();
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
@@ -115,10 +110,6 @@ public class CsvExportService {
                 }
             }
 
-            long batchProcessingTime = System.currentTimeMillis() - startTime;
-            log.info("Batch processing completed in {} seconds", String.format("%.2f", batchProcessingTime / 1000.0));
-
-            long writeStartTime = System.currentTimeMillis();
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
                 writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
                            "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
@@ -126,11 +117,10 @@ public class CsvExportService {
                     writer.write(result);
                 }
             }
-            long writeTime = System.currentTimeMillis() - writeStartTime;
-            log.info("File writing completed in {} seconds", String.format("%.2f", writeTime / 1000.0));
 
         } catch (IOException e) {
             log.error("Error writing to CSV file in multi-thread mode", e);
+            throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
         } finally {
             executor.shutdown();
             try {

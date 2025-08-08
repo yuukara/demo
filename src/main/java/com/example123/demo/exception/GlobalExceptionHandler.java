@@ -14,7 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.example123.demo.util.LoggingUtils;
+
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -111,7 +111,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         
         // 重要なエラー情報をログ出力
-        LoggingUtils.logError(log, "予期しないエラーが発生しました", ex);
+        log.error("予期しないエラーが発生しました", ex);
         
         Map<String, Object> errorResponse = new HashMap<>();
         
