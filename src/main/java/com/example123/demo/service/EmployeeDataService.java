@@ -7,6 +7,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -23,8 +25,10 @@ import jakarta.validation.constraints.NotEmpty;
 @Service
 @Validated
 public class EmployeeDataService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmployeeDataService.class);
     
-    /** 
+    /**
      * バッチ処理のサイズ
      * SQLServerのパラメーター制限(2100)を考慮し、15カラム × 100レコード = 1500パラメーターとなるように設定
      */
@@ -59,13 +63,13 @@ public class EmployeeDataService {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         long startTime = System.currentTimeMillis();
-        System.out.printf("Saving %d employees to the database in parallel with %d threads...%n", 
+        log.info("Saving {} employees to the database in parallel with {} threads...",
             employees.size(), numThreads);
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
             for (int i = 0; i < employees.size(); i += BATCH_SIZE) {
-                batches.add(new ArrayList<>(employees.subList(i, 
+                batches.add(new ArrayList<>(employees.subList(i,
                     Math.min(i + BATCH_SIZE, employees.size()))));
             }
 
@@ -78,26 +82,26 @@ public class EmployeeDataService {
                 try {
                     future.get();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error during parallel bulk insert", e);
                 }
             }
         } finally {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate in the specified time.");
+                    log.warn("Executor did not terminate in the specified time.");
                     List<Runnable> droppedTasks = executor.shutdownNow();
-                    System.err.println("Executor was abruptly shut down. " + 
-                        droppedTasks.size() + " tasks were dropped.");
+                    log.warn("Executor was abruptly shut down. {} tasks were dropped.", droppedTasks.size());
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
         
         long totalTime = System.currentTimeMillis() - startTime;
-        System.out.printf("Parallel database save completed in %.2f seconds%n", totalTime / 1000.0);
+        log.info("Parallel database save completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
     }
 
     /**
@@ -117,13 +121,13 @@ public class EmployeeDataService {
             .count();
         long existingRecords = employees.size() - newRecords;
         
-        System.out.println("\nUpsert operation details:");
-        System.out.printf("Total records: %d%n", employees.size());
-        System.out.printf("Expected new records (ID >= E010000): %d (%.1f%%)%n",
-            newRecords, (newRecords * 100.0 / employees.size()));
-        System.out.printf("Expected updates (ID < E010000): %d (%.1f%%)%n",
-            existingRecords, (existingRecords * 100.0 / employees.size()));
-        System.out.println("Starting MERGE operation...\n");
+        log.info("\nUpsert operation details:");
+        log.info("Total records: {}", employees.size());
+        log.info("Expected new records (ID >= E010000): {} ({}%)",
+            newRecords, String.format("%.1f", newRecords * 100.0 / employees.size()));
+        log.info("Expected updates (ID < E010000): {} ({}%)",
+            existingRecords, String.format("%.1f", existingRecords * 100.0 / employees.size()));
+        log.info("Starting MERGE operation...\n");
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
@@ -141,26 +145,26 @@ public class EmployeeDataService {
                 try {
                     future.get();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error during parallel MERGE upsert", e);
                 }
             }
         } finally {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate in the specified time.");
+                    log.warn("Executor did not terminate in the specified time.");
                     List<Runnable> droppedTasks = executor.shutdownNow();
-                    System.err.println("Executor was abruptly shut down. " + 
-                        droppedTasks.size() + " tasks were dropped.");
+                    log.warn("Executor was abruptly shut down. {} tasks were dropped.", droppedTasks.size());
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
         
         long totalTime = System.currentTimeMillis() - startTime;
-        System.out.printf("Upsert completed in %.2f seconds%n", totalTime / 1000.0);
+        log.info("Upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
     }
 
     /**
@@ -181,13 +185,13 @@ public class EmployeeDataService {
             .count();
         long existingRecords = employees.size() - newRecords;
         
-        System.out.println("\nUpsert operation details (Temp Table method):");
-        System.out.printf("Total records: %d%n", employees.size());
-        System.out.printf("Expected new records (ID >= E010000): %d (%.1f%%)%n",
-            newRecords, (newRecords * 100.0 / employees.size()));
-        System.out.printf("Expected updates (ID < E010000): %d (%.1f%%)%n",
-            existingRecords, (existingRecords * 100.0 / employees.size()));
-        System.out.println("Starting Temp Table operation...\n");
+        log.info("\nUpsert operation details (Temp Table method):");
+        log.info("Total records: {}", employees.size());
+        log.info("Expected new records (ID >= E010000): {} ({}%)",
+            newRecords, String.format("%.1f", newRecords * 100.0 / employees.size()));
+        log.info("Expected updates (ID < E010000): {} ({}%)",
+            existingRecords, String.format("%.1f", existingRecords * 100.0 / employees.size()));
+        log.info("Starting Temp Table operation...\n");
 
         int totalUpdateCount = 0;
         int totalInsertCount = 0;
@@ -212,27 +216,27 @@ public class EmployeeDataService {
                     totalUpdateCount += result.get("updateCount");
                     totalInsertCount += result.get("insertCount");
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error during parallel Temp Table upsert", e);
                 }
             }
         } finally {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate in the specified time.");
+                    log.warn("Executor did not terminate in the specified time.");
                     List<Runnable> droppedTasks = executor.shutdownNow();
-                    System.err.println("Executor was abruptly shut down. " +
-                        droppedTasks.size() + " tasks were dropped.");
+                    log.warn("Executor was abruptly shut down. {} tasks were dropped.", droppedTasks.size());
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
         
         long totalTime = System.currentTimeMillis() - startTime;
-        System.out.printf("Temp Table Upsert completed in %.2f seconds%n", totalTime / 1000.0);
-        System.out.printf("Total updates: %d, Total inserts: %d%n", totalUpdateCount, totalInsertCount);
+        log.info("Temp Table Upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
+        log.info("Total updates: {}, Total inserts: {}", totalUpdateCount, totalInsertCount);
         
         java.util.Map<String, Integer> result = new java.util.HashMap<>();
         result.put("updateCount", totalUpdateCount);
@@ -244,9 +248,9 @@ public class EmployeeDataService {
      * 従業員テーブルのデータを全て削除します。
      */
     public void truncateEmployeesTable() {
-        System.out.println("Truncating employees table...");
+        log.info("Truncating employees table...");
         employeeMapper.truncateTable();
-        System.out.println("Employees table truncated.");
+        log.info("Employees table truncated.");
     }
 
     /**
@@ -254,11 +258,11 @@ public class EmployeeDataService {
      * 更新対象となるデータ（E000000-E009999）を事前にテーブルに投入します。
      */
     public void prepareBaseDataForUpsert() {
-        System.out.println("Preparing base data for upsert test...");
+        log.info("Preparing base data for upsert test...");
         List<Employee> baseEmployees = dataGenerationService.createBaseDataForUpsert();
         
         // バッチでベースデータを投入
         saveEmployeesInParallel(baseEmployees);
-        System.out.println("Base data preparation completed: " + baseEmployees.size() + " records inserted.");
+        log.info("Base data preparation completed: {} records inserted.", baseEmployees.size());
     }
 }

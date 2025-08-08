@@ -2,6 +2,8 @@ package com.example123.demo.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +18,7 @@ import com.example123.demo.service.EmployeeAssignmentHistoryService;
 @RequestMapping("/assignment-histories")
 public class EmployeeAssignmentHistoryController {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeAssignmentHistoryController.class);
     private final EmployeeAssignmentHistoryService service;
 
     @Autowired
@@ -36,7 +39,7 @@ public class EmployeeAssignmentHistoryController {
             service.upsertHistories(histories);
             return ResponseEntity.ok(String.format("Successfully upserted %d assignment histories.", count));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("An error occurred during the upsert process for assignment histories.", e);
             return ResponseEntity.internalServerError().body("An error occurred during the upsert process: " + e.getMessage());
         }
     }

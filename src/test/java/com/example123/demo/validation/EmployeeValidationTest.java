@@ -1,14 +1,15 @@
 package com.example123.demo.validation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.time.LocalDate;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.example123.demo.dto.EmployeeDTO;
 
@@ -23,6 +24,7 @@ import jakarta.validation.ValidatorFactory;
  */
 public class EmployeeValidationTest {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeValidationTest.class);
     private Validator validator;
 
     @BeforeEach
@@ -62,8 +64,8 @@ public class EmployeeValidationTest {
         Set<ConstraintViolation<EmployeeDTO>> violations = validator.validate(employee);
         
         // デバッグ用: 検証エラー内容を出力
-        System.out.println("Validation errors count: " + violations.size());
-        violations.forEach(v -> System.out.println("Field: " + v.getPropertyPath() + ", Message: " + v.getMessage()));
+        log.debug("Validation errors count: {}", violations.size());
+        violations.forEach(v -> log.debug("Field: {}, Message: {}", v.getPropertyPath(), v.getMessage()));
         
         // 必須フィールドの検証エラーが発生することを確認
         assertFalse(violations.isEmpty(), "必須フィールドが空の場合は検証エラーが発生するはず");

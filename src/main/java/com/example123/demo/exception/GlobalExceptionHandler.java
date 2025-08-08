@@ -45,8 +45,11 @@ public class GlobalExceptionHandler {
         });
         
         // バリデーションエラーログを出力（セキュリティ考慮）
+        Object target = ex.getBindingResult().getTarget();
+        String targetClassName = target != null ? target.getClass().getSimpleName() : "Unknown";
         log.warn("入力値検証エラー: 検証対象={}, エラー件数={}", 
-            ex.getBindingResult().getTarget().getClass().getSimpleName(), 
+            targetClassName, 
+
             fieldErrors.size());
         
         errorResponse.put("status", "validation_error");

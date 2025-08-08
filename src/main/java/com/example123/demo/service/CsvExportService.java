@@ -12,6 +12,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.example123.demo.domain.Employee;
@@ -22,8 +24,10 @@ import com.example123.demo.domain.Employee;
  */
 @Service
 public class CsvExportService {
+
+    private static final Logger log = LoggerFactory.getLogger(CsvExportService.class);
     
-    /** 
+    /**
      * バッチ処理のサイズ
      * CSVエクスポート時のパフォーマンス最適化のために使用
      */
@@ -38,8 +42,8 @@ public class CsvExportService {
      * @param filePath 出力先のCSVファイルパス
      */
     public void writeToCsvSingleThread(List<Employee> employees, String filePath) {
-        System.out.println("Using single thread for CSV generation");
-        System.out.printf("Processing %d employees%n", employees.size());
+        log.info("Using single thread for CSV generation");
+        log.info("Processing {} employees", employees.size());
         
         long startTime = System.currentTimeMillis();
         
@@ -67,11 +71,10 @@ public class CsvExportService {
             }
             
             long totalTime = System.currentTimeMillis() - startTime;
-            System.out.printf("Single thread processing completed in %.2f seconds%n", 
-                totalTime / 1000.0);
+            log.info("Single thread processing completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
             
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error writing to CSV file in single-thread mode", e);
         }
     }
 
@@ -86,10 +89,8 @@ public class CsvExportService {
      */
     public void writeToCsv(List<Employee> employees, String filePath) {
         int numThreads = Runtime.getRuntime().availableProcessors();
-        System.out.printf("Using %d threads for CSV generation (based on available processors)%n", 
-            numThreads);
-        System.out.printf("Processing %d employees in batches of %d%n", 
-            employees.size(), BATCH_SIZE);
+        log.info("Using {} threads for CSV generation (based on available processors)", numThreads);
+        log.info("Processing {} employees in batches of {}", employees.size(), BATCH_SIZE);
         
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         long startTime = System.currentTimeMillis();
@@ -110,13 +111,12 @@ public class CsvExportService {
                 try {
                     results.add(future.get());
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error getting result from a CSV generator task", e);
                 }
             }
 
             long batchProcessingTime = System.currentTimeMillis() - startTime;
-            System.out.printf("Batch processing completed in %.2f seconds%n", 
-                batchProcessingTime / 1000.0);
+            log.info("Batch processing completed in {} seconds", String.format("%.2f", batchProcessingTime / 1000.0));
 
             long writeStartTime = System.currentTimeMillis();
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
@@ -127,20 +127,20 @@ public class CsvExportService {
                 }
             }
             long writeTime = System.currentTimeMillis() - writeStartTime;
-            System.out.printf("File writing completed in %.2f seconds%n", writeTime / 1000.0);
+            log.info("File writing completed in {} seconds", String.format("%.2f", writeTime / 1000.0));
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error writing to CSV file in multi-thread mode", e);
         } finally {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate in the specified time.");
+                    log.warn("Executor did not terminate in the specified time.");
                     List<Runnable> droppedTasks = executor.shutdownNow();
-                    System.err.println("Executor was abruptly shut down. " + 
-                        droppedTasks.size() + " tasks were dropped.");
+                    log.warn("Executor was abruptly shut down. {} tasks were dropped.", droppedTasks.size());
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }

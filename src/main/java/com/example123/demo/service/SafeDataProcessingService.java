@@ -9,11 +9,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SafeDataProcessingService {
 
+    private static final Logger log = LoggerFactory.getLogger(SafeDataProcessingService.class);
     private static final int CHUNK_SIZE = 10000;
 
     public List<Integer> processData(int dataSize) {
@@ -42,21 +45,23 @@ public class SafeDataProcessingService {
                 result.addAll(f.get());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error during safe data processing", e);
             Thread.currentThread().interrupt();
         } finally {
             pool.shutdown();
             try {
                 if (!pool.awaitTermination(1, TimeUnit.MINUTES)) {
+                    log.warn("Executor did not terminate in the specified time.");
                     pool.shutdownNow();
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 pool.shutdownNow();
                 Thread.currentThread().interrupt();
             }
         }
         
-        System.out.println("[Safe] Processing finished.");
+        log.info("[Safe] Processing finished.");
         return result;
     }
 }

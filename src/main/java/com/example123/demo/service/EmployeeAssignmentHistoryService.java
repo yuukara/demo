@@ -15,6 +15,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,7 @@ import com.example123.demo.repository.EmployeeAssignmentHistoryMapper;
 @Service
 public class EmployeeAssignmentHistoryService {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeAssignmentHistoryService.class);
     private static final int BATCH_SIZE = 50;
 
     private final EmployeeAssignmentHistoryMapper mapper;
@@ -50,7 +53,7 @@ public class EmployeeAssignmentHistoryService {
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
         long startTime = System.currentTimeMillis();
         
-        System.out.printf("Upserting %d assignment histories with %d threads...%n", historyList.size(), numThreads);
+        log.info("Upserting {} assignment histories with {} threads...", historyList.size(), numThreads);
 
         try {
             // バッチ処理
@@ -76,26 +79,26 @@ public class EmployeeAssignmentHistoryService {
                     totalUpdates += counts.get("updateCount");
                     totalInserts += counts.get("insertCount");
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error("Error getting result from an assignment history upsert task", e);
                 }
             }
             
             long totalTime = System.currentTimeMillis() - startTime;
-            System.out.printf("Assignment history upsert completed in %.2f seconds%n", totalTime / 1000.0);
-            System.out.printf("Updates: %d records, Inserts: %d records%n", totalUpdates, totalInserts);
+            log.info("Assignment history upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
+            log.info("Updates: {} records, Inserts: {} records", totalUpdates, totalInserts);
 
             // 実際に処理されたデータのサンプルを表示
             if (!historyList.isEmpty() && (totalUpdates > 0 || totalInserts > 0)) {
-                System.out.println("\n=== 処理されたデータのサンプル ===");
+                log.info("\n=== 処理されたデータのサンプル ===");
                 
                 // 更新されたデータのサンプル表示
                 if (totalUpdates > 0) {
-                    System.out.printf("更新データのサンプル（%d件中）:%n", totalUpdates);
+                    log.info("更新データのサンプル（{}件中）:", totalUpdates);
                     // 既存データから更新用サンプルを特定（概算）
                     int updateSampleCount = Math.min(3, totalUpdates);
                     for (int i = 0; i < updateSampleCount && i < historyList.size(); i++) {
                         EmployeeAssignmentHistory sample = historyList.get(i);
-                        System.out.printf("  - Employee ID: %s, Org: %s, Job: %s, Status: %s%n",
+                        log.info("  - Employee ID: {}, Org: {}, Job: {}, Status: {}",
                             sample.getEmployeeId(),
                             sample.getOrgCode(),
                             sample.getJobCode(),
@@ -105,13 +108,13 @@ public class EmployeeAssignmentHistoryService {
                 
                 // 新規挿入されたデータのサンプル表示
                 if (totalInserts > 0) {
-                    System.out.printf("新規挿入データのサンプル（%d件中）:%n", totalInserts);
+                    log.info("新規挿入データのサンプル（{}件中）:", totalInserts);
                     // 新規データから挿入用サンプルを特定（概算）
                     int insertSampleCount = Math.min(3, totalInserts);
                     int startIndex = Math.max(0, historyList.size() - totalInserts);
                     for (int i = 0; i < insertSampleCount && (startIndex + i) < historyList.size(); i++) {
                         EmployeeAssignmentHistory sample = historyList.get(startIndex + i);
-                        System.out.printf("  - Employee ID: %s, Org: %s, Job: %s, Status: %s%n",
+                        log.info("  - Employee ID: {}, Org: {}, Job: {}, Status: {}",
                             sample.getEmployeeId(),
                             sample.getOrgCode(),
                             sample.getJobCode(),
@@ -123,12 +126,12 @@ public class EmployeeAssignmentHistoryService {
             executor.shutdown();
             try {
                 if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Executor did not terminate in the specified time.");
+                    log.warn("Executor did not terminate in the specified time.");
                     List<Runnable> droppedTasks = executor.shutdownNow();
-                    System.err.println("Executor was abruptly shut down. " +
-                        droppedTasks.size() + " tasks were dropped.");
+                    log.warn("Executor was abruptly shut down. {} tasks were dropped.", droppedTasks.size());
                 }
             } catch (InterruptedException e) {
+                log.warn("Executor termination was interrupted.", e);
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
