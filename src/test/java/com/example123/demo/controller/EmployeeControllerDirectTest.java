@@ -83,6 +83,7 @@ public class EmployeeControllerDirectTest {
         
         // APIエンドポイントの動作を確認
         // 注意: 実際にはHTTPリクエストではなく、コントローラメソッドの直接呼び出し
+
         
         log.info("Expected API Behavior:");
         log.info("1. MERGE UPSERT: truncate → generateAndUpsert ✓");

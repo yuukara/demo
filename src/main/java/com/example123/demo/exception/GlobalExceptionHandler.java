@@ -49,6 +49,7 @@ public class GlobalExceptionHandler {
         String targetClassName = target != null ? target.getClass().getSimpleName() : "Unknown";
         log.warn("入力値検証エラー: 検証対象={}, エラー件数={}", 
             targetClassName, 
+
             fieldErrors.size());
         
         errorResponse.put("status", "validation_error");
