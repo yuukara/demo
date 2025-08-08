@@ -19,6 +19,7 @@ import com.example123.demo.aop.PerformanceMonitoring;
 @RequestMapping("/assignment-histories")
 public class EmployeeAssignmentHistoryController {
 
+    private static final Logger log = LoggerFactory.getLogger(EmployeeAssignmentHistoryController.class);
     private final EmployeeAssignmentHistoryService service;
 
     @Autowired

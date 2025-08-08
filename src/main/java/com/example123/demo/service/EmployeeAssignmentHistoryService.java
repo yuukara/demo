@@ -56,6 +56,7 @@ public class EmployeeAssignmentHistoryService {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
+
         try {
             // バッチ処理
             List<List<EmployeeAssignmentHistory>> batches = new ArrayList<>();
@@ -84,6 +85,7 @@ public class EmployeeAssignmentHistoryService {
                 }
             }
             
+
         } finally {
             executor.shutdown();
             try {

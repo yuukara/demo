@@ -67,6 +67,7 @@ public class EmployeeDataService {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
+
         try {
             List<List<Employee>> batches = new ArrayList<>();
             for (int i = 0; i < employees.size(); i += BATCH_SIZE) {
@@ -100,6 +101,7 @@ public class EmployeeDataService {
                 Thread.currentThread().interrupt();
             }
         }
+
     }
 
     /**
@@ -113,6 +115,7 @@ public class EmployeeDataService {
     public void upsertEmployeesInBatches(List<Employee> employees) {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
 
         try {
             List<List<Employee>> batches = new ArrayList<>();
@@ -147,6 +150,7 @@ public class EmployeeDataService {
                 Thread.currentThread().interrupt();
             }
         }
+
     }
 
     /**
@@ -161,6 +165,7 @@ public class EmployeeDataService {
     public java.util.Map<String, Integer> upsertEmployeesViaTempTableInBatches(List<Employee> employees) {
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+
 
         int totalUpdateCount = 0;
         int totalInsertCount = 0;
@@ -203,6 +208,7 @@ public class EmployeeDataService {
             }
         }
         
+
         java.util.Map<String, Integer> result = new java.util.HashMap<>();
         result.put("updateCount", totalUpdateCount);
         result.put("insertCount", totalInsertCount);
@@ -215,7 +221,13 @@ public class EmployeeDataService {
     @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "従業員テーブル全削除")
     @PerformanceMonitoring(threshold = 2000, operation = "TRUNCATE_EMPLOYEES")
     public void truncateEmployeesTable() {
+<<<<<<< HEAD
         employeeMapper.truncateTable();
+=======
+        log.info("Truncating employees table...");
+        employeeMapper.truncateTable();
+        log.info("Employees table truncated.");
+>>>>>>> origin/main
     }
 
     /**
@@ -225,9 +237,11 @@ public class EmployeeDataService {
     @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "UPSERT基礎データ準備")
     @PerformanceMonitoring(threshold = 3000, operation = "PREPARE_BASE_DATA")
     public void prepareBaseDataForUpsert() {
+
         List<Employee> baseEmployees = dataGenerationService.createBaseDataForUpsert();
         
         // バッチでベースデータを投入
         saveEmployeesInParallel(baseEmployees);
+
     }
 }

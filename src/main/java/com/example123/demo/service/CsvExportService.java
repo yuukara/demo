@@ -46,6 +46,7 @@ public class CsvExportService {
     @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "CSV出力処理（シングルスレッド）")
     @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_SINGLE_THREAD")
     public void writeToCsvSingleThread(List<Employee> employees, String filePath) {
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
             writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
                         "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
@@ -69,9 +70,7 @@ public class CsvExportService {
                     employee.getVersion()));
             }
             
-        } catch (IOException e) {
-            log.error("Error writing to CSV file in single-thread mode", e);
-            throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
+
         }
     }
 
@@ -88,6 +87,7 @@ public class CsvExportService {
     @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_MULTI_THREAD")
     public void writeToCsv(List<Employee> employees, String filePath) {
         int numThreads = Runtime.getRuntime().availableProcessors();
+
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         try {
@@ -110,6 +110,7 @@ public class CsvExportService {
                 }
             }
 
+
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
                 writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
                            "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
@@ -118,9 +119,6 @@ public class CsvExportService {
                 }
             }
 
-        } catch (IOException e) {
-            log.error("Error writing to CSV file in multi-thread mode", e);
-            throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
         } finally {
             executor.shutdown();
             try {
