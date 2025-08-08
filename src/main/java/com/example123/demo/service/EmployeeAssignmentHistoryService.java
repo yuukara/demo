@@ -19,6 +19,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example123.demo.aop.Loggable;
+import com.example123.demo.aop.PerformanceMonitoring;
 
 import com.example123.demo.domain.EmployeeAssignmentHistory;
 import com.example123.demo.repository.EmployeeAssignmentHistoryKey;
@@ -44,6 +46,8 @@ public class EmployeeAssignmentHistoryService {
      *
      * @param historyList Upsert対象の配属履歴リスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "配属履歴一括UPSERT処理")
+    @PerformanceMonitoring(threshold = 5000, operation = "ASSIGNMENT_HISTORY_UPSERT")
     public void upsertHistories(List<EmployeeAssignmentHistory> historyList) {
         if (historyList == null || historyList.isEmpty()) {
             return;
@@ -51,9 +55,7 @@ public class EmployeeAssignmentHistoryService {
         
         int numThreads = Runtime.getRuntime().availableProcessors();
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
-        long startTime = System.currentTimeMillis();
-        
-        log.info("Upserting {} assignment histories with {} threads...", historyList.size(), numThreads);
+
 
         try {
             // バッチ処理
@@ -83,45 +85,7 @@ public class EmployeeAssignmentHistoryService {
                 }
             }
             
-            long totalTime = System.currentTimeMillis() - startTime;
-            log.info("Assignment history upsert completed in {} seconds", String.format("%.2f", totalTime / 1000.0));
-            log.info("Updates: {} records, Inserts: {} records", totalUpdates, totalInserts);
 
-            // 実際に処理されたデータのサンプルを表示
-            if (!historyList.isEmpty() && (totalUpdates > 0 || totalInserts > 0)) {
-                log.info("\n=== 処理されたデータのサンプル ===");
-                
-                // 更新されたデータのサンプル表示
-                if (totalUpdates > 0) {
-                    log.info("更新データのサンプル（{}件中）:", totalUpdates);
-                    // 既存データから更新用サンプルを特定（概算）
-                    int updateSampleCount = Math.min(3, totalUpdates);
-                    for (int i = 0; i < updateSampleCount && i < historyList.size(); i++) {
-                        EmployeeAssignmentHistory sample = historyList.get(i);
-                        log.info("  - Employee ID: {}, Org: {}, Job: {}, Status: {}",
-                            sample.getEmployeeId(),
-                            sample.getOrgCode(),
-                            sample.getJobCode(),
-                            sample.getStatusCode());
-                    }
-                }
-                
-                // 新規挿入されたデータのサンプル表示
-                if (totalInserts > 0) {
-                    log.info("新規挿入データのサンプル（{}件中）:", totalInserts);
-                    // 新規データから挿入用サンプルを特定（概算）
-                    int insertSampleCount = Math.min(3, totalInserts);
-                    int startIndex = Math.max(0, historyList.size() - totalInserts);
-                    for (int i = 0; i < insertSampleCount && (startIndex + i) < historyList.size(); i++) {
-                        EmployeeAssignmentHistory sample = historyList.get(startIndex + i);
-                        log.info("  - Employee ID: {}, Org: {}, Job: {}, Status: {}",
-                            sample.getEmployeeId(),
-                            sample.getOrgCode(),
-                            sample.getJobCode(),
-                            sample.getStatusCode());
-                    }
-                }
-            }
         } finally {
             executor.shutdown();
             try {
@@ -145,6 +109,8 @@ public class EmployeeAssignmentHistoryService {
      * @param count  全体件数
      * @param updateRatio 更新比率（例: 0.3 → 30%は更新）
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "配属履歴テストデータ生成")
+    @PerformanceMonitoring(threshold = 3000, operation = "ASSIGNMENT_HISTORY_DATA_GENERATION")
     public List<EmployeeAssignmentHistory> createMixedHistories(int count, double updateRatio) {
         List<EmployeeAssignmentHistory> out = new ArrayList<>(count);
         int wantUpdates = (int)Math.round(count * updateRatio);

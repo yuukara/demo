@@ -1,23 +1,26 @@
 package com.example123.demo.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example123.demo.domain.Employee;
 import com.example123.demo.service.EmployeeService;
-import com.example123.demo.util.LoggingUtils;
+
+import com.example123.demo.aop.Loggable;
+import com.example123.demo.aop.PerformanceMonitoring;
 
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
     
-    private static final Logger log = LoggerFactory.getLogger(EmployeeController.class);
     private final EmployeeService employeeService;
 
     public EmployeeController(EmployeeService employeeService) {
@@ -25,69 +28,58 @@ public class EmployeeController {
     }
 
     @PostMapping("/test-merge-upsert")
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "MERGE-UPSERT処理")
+    @PerformanceMonitoring(threshold = 10000, operation = "API_MERGE_UPSERT")
     public Map<String, Object> testMergeUpsert(@RequestParam(defaultValue = "6000") int count) {
-        String operationId = LoggingUtils.logApiStart(log, "/api/employees/test-merge-upsert", "count=" + count);
+        employeeService.truncateEmployeesTable();
         
-        try {
-            LoggingUtils.logDatabaseStart(log, "TRUNCATE", "employees", 0);
-            employeeService.truncateEmployeesTable();
-            LoggingUtils.logDatabaseEnd(log, 0, 0);
-            
-            long startTime = System.currentTimeMillis();
-            employeeService.generateAndUpsertRandomEmployees(count);
-            long endTime = System.currentTimeMillis();
-            long executionTime = endTime - startTime;
-            
-            LoggingUtils.logPerformance("MERGE-UPSERT", executionTime, count);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("method", "MERGE-based UPSERT");
-            result.put("dataCount", count);
-            result.put("executionTime", executionTime);
-            result.put("status", "completed");
-            
-            LoggingUtils.logApiEnd(log, operationId, System.currentTimeMillis() - Long.parseLong(operationId.replaceAll("[^0-9]", "0")));
-            
-            return result;
-        } catch (Exception e) {
-            LoggingUtils.logError(log, "MERGE UPSERT処理でエラーが発生しました", e);
-            throw e;
-        }
+        long startTime = System.currentTimeMillis();
+        employeeService.generateAndUpsertRandomEmployees(count);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("method", "MERGE-based UPSERT");
+        result.put("dataCount", count);
+        result.put("executionTime", executionTime);
+        result.put("status", "completed");
+        
+        return result;
     }
 
     @PostMapping("/test-temp-table-upsert")
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "一時テーブルUPSERT処理")
+    @PerformanceMonitoring(threshold = 10000, operation = "API_TEMP_TABLE_UPSERT")
     public Map<String, Object> testTempTableUpsert(@RequestParam(defaultValue = "6000") int count) {
-        String operationId = LoggingUtils.logApiStart(log, "/api/employees/test-temp-table-upsert", "count=" + count);
+        employeeService.truncateEmployeesTable();
         
-        try {
-            LoggingUtils.logDatabaseStart(log, "TRUNCATE", "employees", 0);
-            employeeService.truncateEmployeesTable();
-            LoggingUtils.logDatabaseEnd(log, 0, 0);
-            
-            long startTime = System.currentTimeMillis();
-            Map<String, Integer> upsertResult = employeeService.generateAndUpsertRandomEmployeesViaTempTable(count);
-            long endTime = System.currentTimeMillis();
-            long executionTime = endTime - startTime;
-            
-            LoggingUtils.logPerformance("TEMP-TABLE-UPSERT", executionTime, count);
-            
-            log.info("Temp Table UPSERT結果: 更新={}件, 挿入={}件", 
-                upsertResult.get("updateCount"), upsertResult.get("insertCount"));
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("method", "Temp Table-based UPSERT");
-            result.put("dataCount", count);
-            result.put("executionTime", executionTime);
-            result.put("updateCount", upsertResult.get("updateCount"));
-            result.put("insertCount", upsertResult.get("insertCount"));
-            result.put("status", "completed");
-            
-            LoggingUtils.logApiEnd(log, operationId, System.currentTimeMillis() - startTime);
-            
-            return result;
-        } catch (Exception e) {
-            LoggingUtils.logError(log, "Temp Table UPSERT処理でエラーが発生しました", e);
-            throw e;
-        }
+        long startTime = System.currentTimeMillis();
+        Map<String, Integer> upsertResult = employeeService.generateAndUpsertRandomEmployeesViaTempTable(count);
+        long executionTime = System.currentTimeMillis() - startTime;
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("method", "Temp Table-based UPSERT");
+        result.put("dataCount", count);
+        result.put("executionTime", executionTime);
+        result.put("updateCount", upsertResult.get("updateCount"));
+        result.put("insertCount", upsertResult.get("insertCount"));
+        result.put("status", "completed");
+        
+        return result;
+    }
+
+    @GetMapping("/test-aop-logging")
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "AOPログ機能テスト")
+    @PerformanceMonitoring(threshold = 1000, operation = "API_AOP_TEST")
+    public Map<String, Object> testAopLogging(@RequestParam(defaultValue = "100") int count) {
+        List<Employee> employees = employeeService.createDummyEmployees(count);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "AOPログ出力テスト完了");
+        result.put("method", "employeeService.createDummyEmployees");
+        result.put("count", count);
+        result.put("generatedCount", employees.size());
+        result.put("timestamp", java.time.LocalDateTime.now());
+        
+        return result;
     }
 }

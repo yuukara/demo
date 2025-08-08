@@ -9,6 +9,8 @@ import java.util.Random;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
+import com.example123.demo.aop.Loggable;
+import com.example123.demo.aop.PerformanceMonitoring;
 import org.springframework.validation.annotation.Validated;
 
 import com.example123.demo.domain.Employee;
@@ -57,6 +59,8 @@ public class DataGenerationService {
      * @param count 生成する従業員データの件数
      * @return 生成された従業員情報のリスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "ランダム従業員データ生成")
+    @PerformanceMonitoring(threshold = 2000, operation = "RANDOM_DATA_GENERATION")
     public List<Employee> createRandomEmployees(@Min(value = 1, message = "生成件数は1以上である必要があります") int count) {
         List<Employee> employees = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
@@ -141,6 +145,8 @@ public class DataGenerationService {
      * @param count 生成する従業員データの件数
      * @return 生成された従業員情報のリスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = true, includeResult = false, value = "ダミー従業員データ生成")
+    @PerformanceMonitoring(threshold = 2000, operation = "DUMMY_DATA_GENERATION")
     public List<Employee> createDummyEmployees(@Min(value = 1, message = "生成件数は1以上である必要があります") int count) {
         List<Employee> employees = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
@@ -176,6 +182,8 @@ public class DataGenerationService {
      *
      * @return 基礎データとして使用する従業員リスト
      */
+    @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "UPSERT用基礎データ生成")
+    @PerformanceMonitoring(threshold = 2000, operation = "BASE_DATA_GENERATION")
     public List<Employee> createBaseDataForUpsert() {
         List<Employee> baseEmployees = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();

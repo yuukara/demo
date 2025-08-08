@@ -257,6 +257,54 @@ public class EmployeeDTO {
 3. **保守性重視**: 単一責任原則とクリーンコード
 4. **パフォーマンス**: バッチ処理とメモリ効率を考慮
 
+## 🔧 **開発中のトラブルシューティング**
+
+### **Javaプロセス停止（ポート競合解決）**
+
+開発中にSpring Bootアプリケーションが正常に停止しない場合やポート競合が発生した場合の対処法：
+
+#### **基本手順**
+```bash
+# 1. 実行中のJavaプロセス一覧を確認
+jps
+
+# 2. DemoApplicationプロセスのIDを確認して強制終了
+powershell "Stop-Process -Id <プロセスID> -Force"
+
+# 3. ポート解放確認（8080ポートの例）
+netstat -an | grep :8080
+
+# 4. 正常にアプリケーション再起動
+mvn spring-boot:run
+```
+
+#### **よくある状況と対処**
+- **ポート8080競合**: `Web server failed to start. Port 8080 was already in use.`
+- **IDE停止ボタンでプロセス残存**: DevToolsの再起動でプロセスが残る場合
+- **logback設定変更後の不正終了**: 設定エラーで異常終了したプロセスの残存
+
+#### **予防策**
+- Spring Boot DevToolsによる自動再起動を活用
+- 設定ファイル変更時は構文チェックを実施
+- IDEのアプリケーション停止機能を適切に使用
+
+### **Maven実行時の注意点**
+
+#### **Windows PowerShell環境での実行**
+```bash
+# パラメータに'-'が含まれる場合はダブルクォートで囲む
+.\mvnw spring-boot:run "-Dspring-boot.run.profiles=dev"
+.\mvnw clean package "-Pprod"
+
+# プロファイル指定でアプリケーション起動
+.\mvnw spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"
+```
+
+#### **ログ出力確認**
+- **開発環境**: コンソール出力 + `logs/application-dev.log`
+- **本番環境**: `logs/application.log` + `logs/error.log`
+- **パフォーマンス**: `logs/performance.log`（全環境共通）
+
 ---
 
 **AI開発支援**: このドキュメントはClaude Codeによる開発支援最適化のために作成されました。
