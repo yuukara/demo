@@ -1,6 +1,6 @@
 package com.example123.demo.aop;
 
-import java.lang.reflect.Method;
+
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
@@ -22,7 +22,7 @@ import com.example123.demo.util.LoggingUtils;
 @Component
 public class LoggingAspect {
     
-    private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
+    
     
     /**
      * @Loggableアノテーションが付けられたメソッドの前後でログ出力
@@ -30,7 +30,7 @@ public class LoggingAspect {
     @Around("@annotation(loggable)")
     public Object logExecutionTime(ProceedingJoinPoint joinPoint, Loggable loggable) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
+        
         String className = signature.getDeclaringTypeName();
         String methodName = signature.getName();
         Object[] args = joinPoint.getArgs();
@@ -39,7 +39,7 @@ public class LoggingAspect {
         Logger targetLogger = LoggerFactory.getLogger(signature.getDeclaringType());
         
         long startTime = System.nanoTime();
-        String operationId = null;
+        String operationId;
         
         try {
             // メソッド実行開始ログ
@@ -176,8 +176,8 @@ public class LoggingAspect {
         if (result instanceof java.util.Collection<?> collection) {
             return collection.size();
         }
-        if (result instanceof Object[]) {
-            return ((Object[]) result).length;
+        if (result instanceof Object[] array) {
+            return array.length;
         }
         return 1; // 単一オブジェクトの場合
     }

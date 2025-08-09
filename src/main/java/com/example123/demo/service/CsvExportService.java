@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -46,10 +47,10 @@ public class CsvExportService {
     @Loggable(level = Loggable.LogLevel.INFO, includeArgs = false, includeResult = false, value = "CSV出力処理（シングルスレッド）")
     @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_SINGLE_THREAD")
     public void writeToCsvSingleThread(List<Employee> employees, String filePath) {
-
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-            writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
-                        "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
+            writer.write("""
+                ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email,BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version
+                """);
             
             for (Employee employee : employees) {
                 writer.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d\n",
@@ -69,8 +70,9 @@ public class CsvExportService {
                     employee.getUpdated_at() != null ? employee.getUpdated_at().toString() : "",
                     employee.getVersion()));
             }
-            
-
+        } catch (IOException e) {
+            log.error("Error writing to CSV file in single-thread mode", e);
+            throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
         }
     }
 
@@ -87,7 +89,6 @@ public class CsvExportService {
     @PerformanceMonitoring(threshold = 5000, operation = "CSV_EXPORT_MULTI_THREAD")
     public void writeToCsv(List<Employee> employees, String filePath) {
         int numThreads = Runtime.getRuntime().availableProcessors();
-
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         try {
@@ -105,18 +106,24 @@ public class CsvExportService {
             for (Future<String> future : futures) {
                 try {
                     results.add(future.get());
-                } catch (Exception e) {
+                } catch (ExecutionException | InterruptedException e) {
                     log.error("Error getting result from a CSV generator task", e);
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
 
-
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-                writer.write("ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email," +
-                           "BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version\n");
+                writer.write("""
+                ID,Name,Department,Position,EmploymentStatus,HireDate,PhoneNumber,Email,BirthDate,Gender,CreatedBy,CreatedAt,UpdatedBy,UpdatedAt,Version
+                """);
                 for (String result : results) {
                     writer.write(result);
                 }
+            } catch (IOException e) {
+                log.error("Error writing to CSV file in multi-thread mode", e);
+                throw new RuntimeException("CSV出力処理でエラーが発生しました", e);
             }
 
         } finally {
