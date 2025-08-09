@@ -17,7 +17,9 @@
       "mcp__serena__insert_after_symbol",
       "mcp__serena__list_dir",
       "mcp__serena__insert_before_symbol",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "mcp__serena__think_about_task_adherence",
+      "mcp__serena__think_about_whether_you_are_done"
     ],
     "deny": []
   }
