@@ -17,36 +17,49 @@ description: "Create a Pull Request"
 現在のブランチをリモートリポジトリにプッシュします。
 上記の変更に基づいて、以下のコマンドを使用してPRを作成します。
 
-```powershell
-# Windows PowerShell環境用
-$TARGET_BRANCH = if ($args.Count -gt 0) { $args[0] } else { "main" }
+```bash
+# Cross-platform compatible approach
+TARGET_BRANCH=${1:-main}
 
-# PRタイトルとボディの準備
-$PR_TITLE = "fix: resolve code review issues and improve security"
-$PR_BODY = @"
+# Get current branch and git information
+CURRENT_BRANCH=$(git branch --show-current)
+
+# Create PR title and body dynamically
+PR_TITLE="fix: resolve code review issues and improve security"
+
+# Create PR body with heredoc syntax
+PR_BODY=$(cat << 'EOF'
 ## やったこと
 - セキュリティ修正（パスワード環境変数化完了）
-- コード品質向上（Java警告解消）
-- EmployeeService リファクタリング
-- 入力値検証の追加
+- コード品質向上（Java警告解消）  
+- Google Java Format導入による統一的なコードフォーマット
+- マルチキャッチ例外処理の最適化
 
 ## 背景
 - コードレビューで指摘されたセキュリティ・品質問題の解決
 - 保守性向上のためのリファクタリング実施
+- 一貫したコードスタイルの確立
 
 ## 動作確認
-- [ ] 単体テスト実行: ``.\mvnw test``
-- [ ] 統合テスト実行: ``.\mvnw verify``
-- [ ] アプリケーション起動確認: ``.\mvnw spring-boot:run``
+- [ ] 単体テスト実行: `.\mvnw test`
+- [ ] 統合テスト実行: `.\mvnw verify` 
+- [ ] フォーマット確認: `.\mvnw com.spotify.fmt:fmt-maven-plugin:check`
+- [ ] アプリケーション起動確認: `.\mvnw spring-boot:run`
 
-## 参考情報
+## 技術詳細
+- Google Java Format 1.21.0 (Java 21対応)
+- ExecutionException | InterruptedException マルチキャッチ構文
+- 環境変数によるDB認証情報管理
+
+## 参考情報  
 - 現在のブランチ: fix/code-review-issues
 - CLAUDE.mdの規約に準拠した実装
 - セキュリティベストプラクティス適用済み
-"@
+EOF
+)
 
 # PRの作成（ドラフトとして）
-gh pr create --draft --base $TARGET_BRANCH --title $PR_TITLE --body $PR_BODY
+gh pr create --draft --base "$TARGET_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
 ```
 
 # PRの表示
@@ -55,15 +68,49 @@ gh pr create --draft --base $TARGET_BRANCH --title $PR_TITLE --body $PR_BODY
 
 ## 実行例
 
-```powershell
-# 1. まず現在のブランチをプッシュ
-git push -u origin fix/code-review-issues
+```bash
+# Cross-platform compatible approach
+TARGET_BRANCH=${1:-main}
 
-# 2. PRを作成
-gh pr create --draft --base main --title "fix: resolve code review issues and improve security" --body "..."
+# Get current branch and git information
+CURRENT_BRANCH=$(git branch --show-current)
 
-# 3. PRをブラウザで確認
-gh pr view --web
+# Create PR title and body dynamically
+PR_TITLE="fix: resolve code review issues and improve security"
+
+# Create PR body with heredoc syntax
+PR_BODY=$(cat << 'EOF'
+## やったこと
+- セキュリティ修正（パスワード環境変数化完了）
+- コード品質向上（Java警告解消）  
+- Google Java Format導入による統一的なコードフォーマット
+- マルチキャッチ例外処理の最適化
+
+## 背景
+- コードレビューで指摘されたセキュリティ・品質問題の解決
+- 保守性向上のためのリファクタリング実施
+- 一貫したコードスタイルの確立
+
+## 動作確認
+- [ ] 単体テスト実行: `.\mvnw test`
+- [ ] 統合テスト実行: `.\mvnw verify` 
+- [ ] フォーマット確認: `.\mvnw com.spotify.fmt:fmt-maven-plugin:check`
+- [ ] アプリケーション起動確認: `.\mvnw spring-boot:run`
+
+## 技術詳細
+- Google Java Format 1.21.0 (Java 21対応)
+- ExecutionException | InterruptedException マルチキャッチ構文
+- 環境変数によるDB認証情報管理
+
+## 参考情報  
+- 現在のブランチ: fix/code-review-issues
+- CLAUDE.mdの規約に準拠した実装
+- セキュリティベストプラクティス適用済み
+EOF
+)
+
+# PRの作成（ドラフトとして）
+gh pr create --draft --base "$TARGET_BRANCH" --title "$PR_TITLE" --body "$PR_BODY"
 ```
 
 ## トラブルシューティング

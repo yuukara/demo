@@ -62,3 +62,10 @@ AI_INSTRUCTIONS.md
 
 # 一時ファイル・不正ファイル
 nul
+node_modules
+
+# Cipher AI データベース（個人データのため除外）
+data/
+*.db
+*.db-shm
+*.db-wal

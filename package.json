@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "cipher": "node -r dotenv/config node_modules/@byterover/cipher/dist/src/app/index.cjs"
+  },
+  "dependencies": {
+    "@byterover/cipher": "0.2.2",
+    "dotenv": "^17.2.1"
+  }
+}
