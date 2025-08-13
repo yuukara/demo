@@ -176,7 +176,8 @@ security: セキュリティ修正
 - `.\mvnw spring-boot:build-image`: Spring Boot Dockerイメージ作成
 
 ### **PowerShell実行の注意点**
-- Windows PowerShellでは `.\mvnw` (バックスラッシュ) を使用
+- Windows PowerShellでは `.\mvnw` (ドット+バックスラッシュ) を使用
+- 実際の実行環境ではUnix形式 `./mvnw` (ドット+スラッシュ) でも動作
 - パラメータに`-`が含まれる場合はダブルクォートで囲む
 - 例: `"-Dspring-boot.run.profiles=dev"`, `"-Pprod"`
 

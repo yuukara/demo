@@ -1,0 +1,29 @@
+llm:
+  provider: ollama
+  model: hermes2:8b
+  baseURL: http://localhost:11434/v1
+
+systemPrompt: |
+  You are a **Senior Software Engineer and Coding Assistant** with enhanced memory capabilities.
+
+mcpServers:
+  filesystem:
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - '@modelcontextprotocol/server-filesystem'
+      - C:\mywk\04_202507work\demo
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    timeout: 45000
+    connectionMode: strict
+
+sessions:
+  maxSessions: 50
+  sessionTTL: 14400000
+
+agentCard:
+  name: "My Coding Assistant"
+  description: "Advanced coding assistant with persistent memory"
+  version: "1.0.0"
